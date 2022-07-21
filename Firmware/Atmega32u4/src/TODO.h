@@ -1,37 +1,10 @@
 /*
 TODO:
+- Geen MPE toepassen, want enigste toevoeging hiervan zou duophonic pitchbend zijn.
+- Koppel de keysBase aan de noot via eeen noot naar keysBase converter:
+    keyBase_from_note[128] = address 0 t/m 3.
+- Geld hetzelfde voor midi cc en poly aftertouch.
 
-
-
-
-
-
-Versie:
-Poly en mono gescheiden.
-Eerst channel diffrentieren in cycling, trigger, split.
-
-Logboek:
-Interstellar_Communicator_PWM_v32 [26-6-22]:
-- reset van ActiveKeys aangevuld.
-Interstellar_Communicator_PWM_v30 [6-6-22]:
-- std::max_element ipv PressureAverage.
-Interstellar_Communicator_PWM_v28 [30-5-22]:
-- Gemiddelde calculatie voor ATP erin gezet met ondersteunende code.
-Interstellar_Communicator_PWM_v28 [7-5-22]:
-- Polyphonic aftertouch werkend gemaakt.
-- Pitchbend toegevoed in keylearn.
-- Keystypes inleren prioriteit gegeven.
-Interstellar_Communicator_PWM_v26 [4-5-22]:
-- Bijna alles erin en getest.
-Interstellar_Communicator_PWM_v24 [3-4-22]:
-- Alle logic omgebouwd.
-Interstellar_Communicator_PWM_v22 [22-2-22]:
-- Gedeeltelijk Debugged.
-Interstellar_Communicator_PWM_v21 [16-1-22]:
-- Aangepast voor unipolaire CV.
-Interstellar_Communicator_PWM_v20 [3-6-21]:
-- Logboek aangemaakt.
-- Midi clock ticks veranderd naar altijd output.
 
 BUGS:
   ...

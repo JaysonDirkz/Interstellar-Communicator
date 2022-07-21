@@ -1,43 +1,46 @@
 #ifndef cv_writes_h
 #define cv_writes_h
 
-int8_t atpAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-int8_t atcAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-int8_t ccAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-int8_t pbAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
+// All have to be inited with -1. Can contain addresses 0 t/m 3.
+i8 atpAddresses[17];
+i8 atcAddresses[17];
+i8 ccAddresses[17];
+i8 pbAddresses[17];
 
-CvBase cvBases[5]; // First one is not used.
-WriteFunction_t *cvWrites[5] = {0, 0, 0, 0, 0}; // First one is not used.
+Cv_Base cv_bases[4];
+WriteFunction_t *cvWrites[4] = {0, 0, 0, 0};
 
-void parseCv(int8_t cvAddress)
+void parse_cv(i8 cvA)
 {
-    cvWrites[cvAddress](&cvBases[cvAddress]);
+    if ( cvA > -1 ) {
+        cvWrites[cvAddress](&cv_bases[cvAddress]);
+    }
 }
 
 // Learn:
 // cvWrites[5] = a cv write function;
 
 // Handle:
-// parseKey(cvAddresses[MIDI.getChannel()]);
+// parse_cv(cvAddresses[MIDI.getChannel()]);
 
-struct CvBase {
-    int8_t row;
+struct Cv_Base {
+    i8 row;
 
     union {
         // Others if neccesary. (atp, atc, pb).
 
         struct { // cc
-            int8_t msb;
-            int8_t lsb;
-            int8_t nrpn_msb;
-            int8_t nrpn_lsb;
+            i8 msb;
+            i8 lsb;
+            i8 nrpn_msb;
+            i8 nrpn_lsb;
 
-            void (*write[128])(CvBase *);
+            void (*write[128])(Cv_Base *);
         };
     };
 };
 
-void write_atp(CvBase *b)
+void write_atp(Cv_Base *b)
 {
     if ( MIDI.getData1() == keysGlobal.atp_note[b->row] )
     {
@@ -45,47 +48,47 @@ void write_atp(CvBase *b)
     }
 }
 
-void write_atc(CvBase *b)
+void write_atc(Cv_Base *b)
 {
     cv_pins[b->row] = MIDI.getData1();
 }
 
-void write_pb(CvBase *b)
+void write_pb(Cv_Base *b)
 {
     cv_pins[b->row] = (MIDI.getData2() + 8192) >> 6;
 }
 
 // Controlchange base.
-void write_cc_base(CvBase *b)
+void write_cc_base(Cv_Base *b)
 {
     b->write[MIDI.getData1()](b);
 }
     // Normal.
-    void normal(CvBase *b)
+    void normal(Cv_Base *b)
     {
         cv_pins[b->row] = MIDI.getData2();
     }
 
     // Precision.
-    void precision_msb(CvBase *b)
+    void precision_msb(Cv_Base *b)
     {
         b->write[MIDI.getData1() + 32] = precision_lsb;
         b->msb = MIDI.getData2();
     }
 
-    void precision_lsb(CvBase *b)
+    void precision_lsb(Cv_Base *b)
     {
         b->write[MIDI.getData1()] = 0;
         cv_pins[b->row] = (b->msb << 7) | MIDI.getData2();
     }
 
     // Nrpn and rpn normal.
-    void nrpn_99_or_rpn_101_msb_number_normal(CvBase *b)
+    void nrpn_99_or_rpn_101_msb_number_normal(Cv_Base *b)
     {
         b->write[MIDI.getData1() - 1] = nrpn_98_lsb_number_normal;
     }
 
-    void nrpn_98_or_rpn_100_number_normal(CvBase *b)
+    void nrpn_98_or_rpn_100_number_normal(Cv_Base *b)
     {
         b->write[MIDI.getData1()] = 0;
         b->write[6] = nrpn_6_value_normal;
@@ -93,7 +96,7 @@ void write_cc_base(CvBase *b)
         b->write[97] = nrpn_decrement;
     }
 
-    void nrpn_6_value_normal(CvBase *b)
+    void nrpn_6_value_normal(Cv_Base *b)
     {
         b->write[6] = 0;
         b->write[96] = 0;
@@ -102,12 +105,12 @@ void write_cc_base(CvBase *b)
     }
 
     // Nrpn precision.
-    void nrpn_99_or_rpn_101_lsb_number_precision(CvBase *b)
+    void nrpn_99_or_rpn_101_lsb_number_precision(Cv_Base *b)
     {
         b->write[MIDI.getData1() - 1] = nrpn_98_lsb_number_precision;
     }
 
-    void nrpn_98_or_rpn_100_lsb_number_precision(CvBase *b)
+    void nrpn_98_or_rpn_100_lsb_number_precision(Cv_Base *b)
     {
         b->write[MIDI.getData1()] = 0;
         b->write[6] = nrpn_6_value_precision_msb;
@@ -115,7 +118,7 @@ void write_cc_base(CvBase *b)
         b->write[97] = nrpn_decrement;
     }
 
-    void nrpn_6_value_precision_msb(CvBase *b)
+    void nrpn_6_value_precision_msb(Cv_Base *b)
     {
         b->write[6] = 0;
         b->write[96] = 0;
@@ -123,7 +126,7 @@ void write_cc_base(CvBase *b)
         precision_msb(b);
     }
 
-    void nrpn_increment(CvBase *b)
+    void nrpn_increment(Cv_Base *b)
     {
         b->write[96] = 0;
         b->write[97] = 0;
@@ -133,7 +136,7 @@ void write_cc_base(CvBase *b)
         else if ( cv_pins[b->row] < 0 ) cv_pins[b->row] = 0;
     }
 
-    void nrpn_decrement(CvBase *b)
+    void nrpn_decrement(Cv_Base *b)
     {
         b->write[96] = 0;
         b->write[97] = 0;

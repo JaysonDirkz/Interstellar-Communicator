@@ -4,18 +4,18 @@
 class SysExProgrammer {
     private:
     char** identifiers = nullptr;
-    uint8_t identifierAmount = 0;
+    u8 identifierAmount = 0;
 
     public:
-    SysExProgrammer(char** arrayOfIdentifiers, uint8_t identifierAmountIn)
+    SysExProgrammer(char** arrayOfIdentifiers, u8 identifierAmountIn)
     {
         identifiers = arrayOfIdentifiers;
         identifierAmount = identifierAmountIn;
     }
 
-    process(uint8_t* messages, uint8_t messageLengthBytes)
+    process(u8* messages, u8 messageLengthBytes)
     {
-        for ( uint8_t i = 0; i < identifierAmount; ++i )
+        for ( u8 i = 0; i < identifierAmount; ++i )
         {
         }
     }

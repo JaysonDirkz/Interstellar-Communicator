@@ -1,12 +1,15 @@
 #ifndef global_h
 #define global_h
 
-int8_t cv_pins[4];
-int8_t gate_pins[4];
+typedef int8_t i8;
+typedef uint8_t u8;
 
-int8_t clockCounter = -1;
-int8_t resetCounter = -1;
-int8_t trigCounter[4] = {-1, -1, -1, -1};
+i8 cv_pins[4];
+i8 gate_pins[4];
+
+i8 clockCounter = -1;
+i8 resetCounter = -1;
+i8 trigCounter[4] = {-1, -1, -1, -1};
 
 //Functions.
 typedef void WriteFunction_t(KeysBase *); // For declaring function pointers.
@@ -21,7 +24,7 @@ typedef void WriteFunction_t(KeysBase *); // For declaring function pointers.
 //     Button4 = A3
 // }
 
-// enum OutPin: int8_t {
+// enum OutPin: i8 {
 //     Clock = 2,
 //     Reset = 3,
 //     Gate1 = 4,
@@ -30,8 +33,8 @@ typedef void WriteFunction_t(KeysBase *); // For declaring function pointers.
 //     Gate4 = 8
 // };
 
-// const int8_t rowAmount = 4;
-// const int8_t buttonsAmount = rowAmount;
-// const int8_t gateOutsAmount = rowAmount;
-// const int8_t cvOutsAmount = rowAmount;
+// const i8 rowAmount = 4;
+// const i8 buttonsAmount = rowAmount;
+// const i8 gateOutsAmount = rowAmount;
+// const i8 cvOutsAmount = rowAmount;
 #endif

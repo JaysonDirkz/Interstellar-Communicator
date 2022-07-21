@@ -8,7 +8,7 @@ bool debugState = 1;
 #include "MidiUtility.h"
 
 #include "global.c"
-#include "cv_write.c"
+#include "cv_writes.c"
 #include "keys_writes.c"
 #include "learn.cpp"
 
@@ -40,10 +40,10 @@ bool debugState = 1;
 // Terminal count
 #define PWM6_13_MAX OCR4C
 
-const uint8_t rowTo_32u4PINF_bit[4] = {0x80, 0x40, 0x20, 0x10};
+const u8 rowTo_32u4PINF_bit[4] = {0x80, 0x40, 0x20, 0x10};
 
 // 5 als minimum want midi clock pulse lengte bij 360 bpm is 60000 / 360*24 = 6,94 ms
-const uint8_t PULSE_LENGTH_MS = 5;
+const u8 PULSE_LENGTH_MS = 5;
 
 void setup()
 {
@@ -124,7 +124,7 @@ void setup()
     // all addresses.
 }
 
-inline uint8_t get_bitfield_buttons()
+inline u8 get_bitfield_buttons()
 {
     return ~PINF & B11110000;
 }
@@ -151,7 +151,7 @@ void setOutputs()
             default: --resetCounter; break;
         }
         
-        for ( int8_t row = 0; row < 4; ++row )
+        for ( i8 row = 0; row < 4; ++row )
         {
             switch ( trigCounter[row] )
             {
@@ -162,18 +162,18 @@ void setOutputs()
         }
     }
 
-    for ( int8_t i = 0; i < 4; ++i ) {
+    for ( i8 i = 0; i < 4; ++i ) {
         cv_out(i);
     }
 
-    for ( int8_t i = 0; i < 4; ++i ) {
+    for ( i8 i = 0; i < 4; ++i ) {
         gate_out(i);
     }
 }
 
-void cv_out(int8_t row)
+void cv_out(i8 row)
 {
-	// uint8_t value = number >> rightShift;
+	// u8 value = number >> rightShift;
 	switch (row)
 	{
 		case 0: PWM6 = cv_pins[row]; break;
@@ -190,9 +190,9 @@ void cv_out(int8_t row)
 	 }
 }
 
-void gate_out(int8_t row)
+void gate_out(i8 row)
 {
-	const int8_t GATES[4] = {GATE_1_PIN, GATE_2_PIN, GATE_3_PIN, GATE_4_PIN};
+	const i8 GATES[4] = {GATE_1_PIN, GATE_2_PIN, GATE_3_PIN, GATE_4_PIN};
 
 	digitalWrite(GATES[row], gate_pins[row]);
 
@@ -210,7 +210,7 @@ void loop()
         static unsigned long t_0 = 0;
         unsigned long t_now = millis();
 
-        static uint8_t b_last = 0;
+        static u8 b_last = 0;
         if ( b_now != b_last ) t_0 = t_now;
         b_last = b_now;
 
@@ -228,23 +228,23 @@ void loop()
         switch ( MIDI.getType() ) {
             case NoteOn:
             case NoteOff:
-                parseKey(keysAddresses[MIDI.getChannel()]);
+                parse_key();
             break;
 
             case AfterTouchPoly:
-                learnCv(atpAddresses[MIDI.getChannel()]);
+                parse_cv(atpAddresses[MIDI.getChannel()]);
             break;
 
             case AfterTouchChannel:
-                learnCv(atcAddresses[MIDI.getChannel()]);
+                parse_cv(atcAddresses[MIDI.getChannel()]);
             break;
 
             case PitchBend:
-                learnCv(pbAddresses[MIDI.getChannel()]);
+                parse_cv(pbAddresses[MIDI.getChannel()]);
             break;
 
             case ControlChange:
-                learnCv(ccAddresses[MIDI.getChannel()]);
+                parse_cv(ccAddresses[MIDI.getChannel()]);
             break;
 
             case SystemExclusive:

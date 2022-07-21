@@ -4,21 +4,21 @@
 namespace DirkXoniC
 {
 //debug
-const uint8_t debugSize = 50;
+const u8 debugSize = 50;
 char debug[debugSize];
 
-template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
+template <u8 keyMaxAmount = 10> class ActiveKeysFast2 {
     private:
-    int8_t keyPositions[128];
-    const uint8_t keyPositionsSize = sizeof(keyPositions) / sizeof(keyPositions[0]);
+    i8 keyPositions[128];
+    const u8 keyPositionsSize = sizeof(keyPositions) / sizeof(keyPositions[0]);
     
-    int8_t keyAtPositions[keyMaxAmount];
-    int8_t queue[keyMaxAmount];
+    i8 keyAtPositions[keyMaxAmount];
+    i8 queue[keyMaxAmount];
 
-    uint8_t queueCount = 0;
-    uint8_t queueEnd = 0;
+    u8 queueCount = 0;
+    u8 queueEnd = 0;
     
-    uint8_t amount = 0;
+    u8 amount = 0;
 
     public:
     ActiveKeysFast()
@@ -32,19 +32,19 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
         queueEnd = 0;
         amount = 0;
 
-        for ( uint8_t i = 0; i < keyPositionsSize; ++i )
+        for ( u8 i = 0; i < keyPositionsSize; ++i )
         {
             keyPositions[i] = -1;
         }
 
-        for ( uint8_t i = 0; i < keyMaxAmount; ++i )
+        for ( u8 i = 0; i < keyMaxAmount; ++i )
         {
             keyAtPositions[i] = -1;
             queue[i] = 0;
         }
     }
 
-    bool noteOn(int8_t key)
+    bool noteOn(i8 key)
     {
         bool adressIsFree = keyPositions[key] == -1 && amount < keyMaxAmount;
         if ( adressIsFree ) // key not yet added and amount limit not reached
@@ -58,7 +58,7 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
                 if ( debugState )
                 {
                     snprintf(debug, debugSize, "ActKey On  key: %d, am: %d", key, amount);
-                    MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+                    MIDI.sendSysEx(debugSize, (u8 *)debug);
                 }
 
                 queueCount = 0;
@@ -73,7 +73,7 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
                 if ( debugState )
                 {
                     snprintf(debug, debugSize, "ActKey On  key: %d, am: %d, qC: %d, q: %d", key, amount, queueCount, queue[queueCount]);
-                    MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+                    MIDI.sendSysEx(debugSize, (u8 *)debug);
                 }
                 
                 ++queueCount;
@@ -87,13 +87,13 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
         // if ( debugState )
         // {
         //     snprintf(debug, debugSize, "ak  k %d a %d  On", key, amount);
-        //     MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+        //     MIDI.sendSysEx(debugSize, (u8 *)debug);
         // }
 
         return adressIsFree;
     }
 
-    bool noteOff(int8_t key)
+    bool noteOff(i8 key)
     {
         bool adressIsFilled = keyPositions[key] > -1;
         if ( adressIsFilled ) // key was added
@@ -105,7 +105,7 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
             if ( debugState )
             {
                 snprintf(debug, debugSize, "ActKey Off key: %d, am: %d, qE: %d, q: %d", key, amount, queueEnd, queue[queueEnd]);
-                MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+                MIDI.sendSysEx(debugSize, (u8 *)debug);
             }
 
             ++queueEnd;
@@ -119,7 +119,7 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
         if ( debugState )
         {
             // snprintf(debug, debugSize, "ak  k %d a %d  Off", key, amount);
-            // MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+            // MIDI.sendSysEx(debugSize, (u8 *)debug);
         }
 
         return adressIsFilled;
@@ -138,37 +138,37 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast2 {
     //     else return false;
     // }
 
-    // int8_t getQueuePosition()
+    // i8 getQueuePosition()
     // {
     //     return queue[queueCount];
     // }
 
-    int8_t getPosition(int8_t key)
+    i8 getPosition(i8 key)
     {
         return keyPositions[key];
     }
 
-    int8_t getKey(uint8_t position)
+    i8 getKey(u8 position)
     {
         return keyAtPositions[position];
     }
 
-    uint8_t getAmount()
+    u8 getAmount()
     {
         return amount;
     }
 };
 
-template <uint8_t keyMaxAmount = 10> class ActiveKeysFast {
+template <u8 keyMaxAmount = 10> class ActiveKeysFast {
     private:
-    int8_t keyPositions[128];
-    int8_t keyAtPositions[keyMaxAmount];
-    int8_t queue[keyMaxAmount];
+    i8 keyPositions[128];
+    i8 keyAtPositions[keyMaxAmount];
+    i8 queue[keyMaxAmount];
 
-    uint8_t queueOnCount = 0;
-    uint8_t queueOffCount = 0;
+    u8 queueOnCount = 0;
+    u8 queueOffCount = 0;
     
-    uint8_t amount = 0;
+    u8 amount = 0;
 
     public:
     ActiveKeysFast()
@@ -182,19 +182,19 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast {
         queueOffCount = 0;
         amount = 0;
 
-        for ( uint8_t i = 0; i < 128; ++i )
+        for ( u8 i = 0; i < 128; ++i )
         {
             keyPositions[i] = -1;
         }
 
-        for ( uint8_t i = 0; i < keyMaxAmount; ++i )
+        for ( u8 i = 0; i < keyMaxAmount; ++i )
         {
             keyAtPositions[i] = -1;
             queue[i] = i;
         }
     }
 
-    bool noteOn(int8_t key)
+    bool noteOn(i8 key)
     {
         bool adressIsFree = keyPositions[key] == -1 && amount < keyMaxAmount;
         if ( adressIsFree ) // key not yet added and amount limit not reached
@@ -207,7 +207,7 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast {
                 snprintf(debug, debugSize,
                     "ActKeyOn key: %d, am: %d, qOn: %d, qOf: %d, qC: %d",
                     key, amount, queueOnCount, queueOffCount, queue[queueOnCount]);
-                MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+                MIDI.sendSysEx(debugSize, (u8 *)debug);
             }
             
             bool queueEqual = queueOnCount == queueOffCount;
@@ -222,9 +222,9 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast {
         return adressIsFree;
     }
 
-    bool noteOff(int8_t key)
+    bool noteOff(i8 key)
     {
-        int8_t keyPos = keyPositions[key];
+        i8 keyPos = keyPositions[key];
         bool adressIsFilled = keyPos > -1;
         if ( adressIsFilled ) // key was added
         {
@@ -236,7 +236,7 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast {
                 snprintf(debug, debugSize,
                     "ActKeyOff key: %d, am: %d, q1: %d, q2: %d",
                     key, amount, queue[keyPos], queue[queueOffCount]);
-                MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+                MIDI.sendSysEx(debugSize, (u8 *)debug);
             }
 
             ++queueOffCount;
@@ -250,26 +250,26 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysFast {
         return adressIsFilled;
     }
 
-    int8_t getPosition(int8_t key)
+    i8 getPosition(i8 key)
     {
         return keyPositions[key];
     }
 
-    int8_t getKey(uint8_t position)
+    i8 getKey(u8 position)
     {
         return keyAtPositions[position];
     }
 
-    uint8_t getAmount()
+    u8 getAmount()
     {
         return amount;
     }
 };
 
-template <uint8_t keyMaxAmount = 10> class ActiveKeysSmall {
+template <u8 keyMaxAmount = 10> class ActiveKeysSmall {
     private:
-    int8_t keysAtPosition[keyMaxAmount];
-    uint8_t amount = 0;
+    i8 keysAtPosition[keyMaxAmount];
+    u8 amount = 0;
 
     public:
     ActiveKeysSmall()
@@ -281,20 +281,20 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysSmall {
     {
         amount = 0;
         
-        for ( uint8_t i = 0; i < keyMaxAmount; ++i )
+        for ( u8 i = 0; i < keyMaxAmount; ++i )
         {
             keysAtPosition[i] = -1;
         }
     }
 
-    int8_t getKey(int8_t pos)
+    i8 getKey(i8 pos)
     {
         return keysAtPosition[pos];
     }
 
-    bool noteOn(int8_t key)
+    bool noteOn(i8 key)
     {
-        for ( int8_t pos = 0; pos < keyMaxAmount; ++pos )
+        for ( i8 pos = 0; pos < keyMaxAmount; ++pos )
         {
             if ( getKey(pos) == -1 ) // place empty
             {
@@ -311,9 +311,9 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysSmall {
         return false;
     }
     
-    bool noteOff(int8_t key)
+    bool noteOff(i8 key)
     {
-        for ( int8_t pos = 0; pos < keyMaxAmount; ++pos )
+        for ( i8 pos = 0; pos < keyMaxAmount; ++pos )
         {
             if ( key == getKey(pos) )
             {
@@ -327,9 +327,9 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysSmall {
         return false;
     }
     
-    int8_t getPosition(int8_t key)
+    i8 getPosition(i8 key)
     {
-        for ( int8_t pos = 0; pos < keyMaxAmount; ++pos )
+        for ( i8 pos = 0; pos < keyMaxAmount; ++pos )
         {
             if ( key == getKey(pos) )
             {
@@ -339,53 +339,53 @@ template <uint8_t keyMaxAmount = 10> class ActiveKeysSmall {
         return -1;
     }
 
-    uint8_t getAmount()
+    u8 getAmount()
     {
         return amount;
     }
 };
 
-template <uint8_t keyMaxAmount> class LastNoteFast {
+template <u8 keyMaxAmount> class LastNoteFast {
     private:
-    int8_t historicNotes[keyMaxAmount];
-    int8_t futureNotes[keyMaxAmount];
+    i8 historicNotes[keyMaxAmount];
+    i8 futureNotes[keyMaxAmount];
 
-    int8_t noteHist = -1;
-    int8_t noteOut = 0;
-    int8_t velOut = 0;
-    int8_t stateOut = 0;
+    i8 noteHist = -1;
+    i8 noteOut = 0;
+    i8 velOut = 0;
+    i8 stateOut = 0;
 
     public:
     LastNoteFast()
     {
-        for ( uint8_t i = 0; i < keyMaxAmount; ++i )
+        for ( u8 i = 0; i < keyMaxAmount; ++i )
         {
             historicNotes[i] = -2;
             futureNotes[i] = -2;
         }
     }
 
-    bool getNoteState(int8_t note)
+    bool getNoteState(i8 note)
     {
         return historicNotes[note] > -2;
     }
 
-    int8_t getState()
+    i8 getState()
     {
         return stateOut;
     }
 
-    int8_t getPitch()
+    i8 getPitch()
     {
         return noteOut;
     }
 
-    int8_t getVelocity()
+    i8 getVelocity()
     {
         return velOut;
     }
 
-    void noteOn(int8_t noteIn, int8_t velIn)
+    void noteOn(i8 noteIn, i8 velIn)
     {
         bool adressIsFree = historicNotes[noteIn] == -2;
         if ( adressIsFree )
@@ -402,11 +402,11 @@ template <uint8_t keyMaxAmount> class LastNoteFast {
         if ( debugState )
         {
             snprintf(debug, debugSize, "ln  i %d o %d s %d On", noteIn, noteOut, stateOut);
-            MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+            MIDI.sendSysEx(debugSize, (u8 *)debug);
         }
     }
 
-    bool noteOff(int8_t noteIn, int8_t velIn)
+    bool noteOff(i8 noteIn, i8 velIn)
     {
         bool adressIsFilled = historicNotes[noteIn] > -2;
         if ( adressIsFilled )
@@ -435,8 +435,8 @@ template <uint8_t keyMaxAmount> class LastNoteFast {
             }
             else // Note OFF which was ON but not the previous note.
             {
-                int8_t futureNote = futureNotes[noteIn];
-                int8_t historicNote = historicNotes[noteIn];
+                i8 futureNote = futureNotes[noteIn];
+                i8 historicNote = historicNotes[noteIn];
                 if ( futureNote > -1 ) historicNotes[futureNote] = historicNote;
                 if ( historicNote > -1 ) futureNotes[historicNote] = futureNote;
             }
@@ -448,48 +448,48 @@ template <uint8_t keyMaxAmount> class LastNoteFast {
         if ( debugState )
         {
             snprintf(debug, debugSize, "ln  i %d o %d s %d Off", noteIn, noteOut, stateOut);
-            MIDI.sendSysEx(debugSize, (uint8_t *)debug);
+            MIDI.sendSysEx(debugSize, (u8 *)debug);
         }
 
         return adressIsFilled;
     }
 };
 
-template <uint8_t amount = 10> class LastNoteSmall {
+template <u8 amount = 10> class LastNoteSmall {
     private:
-    int8_t notes[amount];
-    int8_t endPos = amount - 1;
-    int8_t position = -1;
+    i8 notes[amount];
+    i8 endPos = amount - 1;
+    i8 position = -1;
 
-    int8_t noteOut = 0;
-    int8_t velOut = 0;
-    int8_t stateOut = 0;
+    i8 noteOut = 0;
+    i8 velOut = 0;
+    i8 stateOut = 0;
 
     public:
     LastNoteSmall()
     {
-        for ( uint8_t pos = 0; pos < amount; ++pos )
+        for ( u8 pos = 0; pos < amount; ++pos )
         {
             notes[pos] = -1;
         }
     }
 
-    int8_t getState()
+    i8 getState()
     {
         return stateOut;
     }
 
-    int8_t getPitch()
+    i8 getPitch()
     {
         return noteOut;
     }
 
-    int8_t getVelocity()
+    i8 getVelocity()
     {
         return velOut;
     }
 
-    void noteOn(int8_t noteIn, int8_t velIn) // Wees er van bewust dat je op deze manier noten dubbel kan toevoegen. (zo is er geen loop nodig).
+    void noteOn(i8 noteIn, i8 velIn) // Wees er van bewust dat je op deze manier noten dubbel kan toevoegen. (zo is er geen loop nodig).
     {
         position = position == endPos ? 0 : position + 1;
 
@@ -500,18 +500,18 @@ template <uint8_t amount = 10> class LastNoteSmall {
         stateOut = 1;
     }
 
-    bool noteOff(int8_t noteIn, int8_t velIn)
+    bool noteOff(i8 noteIn, i8 velIn)
     {
         bool found = false;
-        int8_t offPos = position;
+        i8 offPos = position;
 
-        for ( int8_t i = 0; i < amount; ++i )
+        for ( i8 i = 0; i < amount; ++i )
         {
             if ( notes[offPos] == noteIn ) found = true; // The note is found.
             
             if ( found )
             {
-                int8_t nextPos = offPos == 0 ? endPos : offPos - 1;
+                i8 nextPos = offPos == 0 ? endPos : offPos - 1;
                 
                 notes[offPos] = notes[nextPos];
 
@@ -549,33 +549,33 @@ template <uint8_t amount = 10> class LastNoteSmall {
 };
 
 /* Obsoliet. Het is beter om de max waarde te nemen. Gebruik std::max_element uit <algorithms> te gebruiken.
-template <uint8_t keyMaxAmount = 10> class PressureAverage {
+template <u8 keyMaxAmount = 10> class PressureAverage {
     private:
     #include <UtilityFunc.h>
 
-    int8_t pressures[keyMaxAmount];
+    i8 pressures[keyMaxAmount];
 
-    int8_t average = 0;
-    int8_t diff = 0;
-    int8_t output = 0;
+    i8 average = 0;
+    i8 diff = 0;
+    i8 output = 0;
 
-    Change <uint8_t> amountChange = Change <uint8_t> (0);
+    Change <u8> amountChange = Change <u8> (0);
 
     public:
     PressureAverage()
     {
-        for ( int8_t i = 0; i < keyMaxAmount; ++i )
+        for ( i8 i = 0; i < keyMaxAmount; ++i )
         {
             pressures[i] = 0;
         }
     }
 
-    int8_t operator()(int8_t pressure, int8_t position, uint8_t amount) {
+    i8 operator()(i8 pressure, i8 position, u8 amount) {
         pressures[position] = pressure;
 
         int16_t sum = 0;
 
-        for ( int8_t i = 0; i < keyMaxAmount; ++i )
+        for ( i8 i = 0; i < keyMaxAmount; ++i )
         {
             sum = sum + pressures[i];
         }
