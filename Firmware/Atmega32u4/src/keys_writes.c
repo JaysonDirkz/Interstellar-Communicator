@@ -4,15 +4,18 @@
 i8 keysAddresses[17]; // Has to be inited with -1. Can contain addresses 0 t/m 3.
 
 Notes_Shared notes_shared;
-Notes_Base notes_bases[4] = {0, 0, 0, 0};
-
-WriteFunction_t *note_writers[4][128]; // Check in monitor if it inits to 0;
+i8 note_adresses[4][128]; // Has to be inited with -1. Can contain addresses 0 t/m 3.
+Note_Bases note_bases[4] = {0, 0, 0, 0};
+WriteFunction_t *note_writers[4] = {wrRet, wrRet, wrRet, wrRet};
 
 void parse_key()
 {
     i8 kA = keysAddresses[MIDI.getChannel()];
     if ( kA > -1 ) {
-        note_writers[kA][MIDI.getData1()](note_bases[kA]);
+        i8 nA = note_addresses[kA][MIDI.getData1()];
+        if ( nA > -1 ) {
+            note_writers[nA](note_bases[nA]);
+        }
     }
 }
 
@@ -33,7 +36,7 @@ struct Notes_Shared {
     };
 };
 
-struct Notes_Base {
+struct Note_Bases {
     union {
         struct { //Percussion
             i8 row;
@@ -58,7 +61,7 @@ struct Notes_Base {
 };
 
 // For both.
-// void write_keys_base(Notes_Base *b)
+// void write_keys_base(Note_Bases *b)
 // {
 //     b->note_router[MIDI.getData1()](b);
 
@@ -67,33 +70,33 @@ struct Notes_Base {
 // }
 
 // For Percussion.
-void on_trigger(Notes_Base *b)
+void on_trigger(Note_Bases *b)
 {
     trigCounter[b->row] = PULSE_LENGTH_MS;
     gate_pins[b->row] = true;
 }
 
-void on_trigger_velocity(Notes_Base *b)
+void on_trigger_velocity(Note_Bases *b)
 {
     on_trigger(b);
     cv_pins[b->row] = MIDI.getData2;
 }
 
     // Only called by on_trigger_choke and on_trigger_velocity_choke.
-    void choke(Notes_Base *b)
+    void choke(Note_Bases *b)
     {
         for ( i8 i = 0; i < b->chokegroup_other_pins_amount; ++i ) {
             cv_pins[b->chokegroup_other_cv_pins[i]] = 0;
         }
     }
 
-void on_trigger_choke(Notes_Base *b)
+void on_trigger_choke(Note_Bases *b)
 {
     on_trigger(b);
     choke(b);
 }
 
-void on_trigger_velocity_choke(Notes_Base *b)
+void on_trigger_velocity_choke(Note_Bases *b)
 {
     on_trigger_velocity(b);
     choke(b);
@@ -101,7 +104,7 @@ void on_trigger_velocity_choke(Notes_Base *b)
 
 
 // For keys.
-void on_keys(Notes_Base *b)
+void on_keys(Note_Bases *b)
 {
     if ( b->last_note[b->voice_next].add(MIDI.getData1(), MIDI.getData2()) ) {
         note_writers[b->address][MIDI.getData1()] = off_keys;
@@ -110,7 +113,7 @@ void on_keys(Notes_Base *b)
     }
 }
 
-void off_keys(Notes_Base *b)
+void off_keys(Note_Bases *b)
 {
     for ( i8 voice = b->voice_max; voice >= 0; --voice ) {
         if ( b->last_note[voice].remove(MIDI.getData1(), MIDI.getData2()) ) {
@@ -121,30 +124,30 @@ void off_keys(Notes_Base *b)
     }
 }
 
-void write_gate_pitch(Notes_Base *b)
+void write_gate_pitch(Note_Bases *b)
 {
     gate_pins[b->row_g_p[b->voice]] = b->last_note[b->voice].get_state();
     cv_pins[b->row_g_p[b->voice]] = b->last_note[b->voice].get_pitch();
 }
 
-void write_gate_pitch_velocity(Notes_Base *b)
+void write_gate_pitch_velocity(Note_Bases *b)
 {
     write_gate_pitch(b);
     cv_pins[b->row_v[b->voice]] = b->last_note[b->voice].get_velocity();
 }
 
-    void write_atp(Notes_Base *b)
+    void write_atp(Note_Bases *b)
     {
         notes_shared.atp_note[b->row_a[b->voice]] = b->last_note.get_pitch(); // shared var between keys and atp;
     }
 
-void write_gate_pitch_atp(Notes_Base *b)
+void write_gate_pitch_atp(Note_Bases *b)
 {
     write_gate_pitch(b);
     write_atp(b);
 }
 
-void write_gate_pitch_velocity_atp(Notes_Base *b)
+void write_gate_pitch_velocity_atp(Note_Bases *b)
 {
     write_gate_pitch_velocity(b);
     write_atp(b);

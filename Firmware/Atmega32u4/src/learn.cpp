@@ -1,14 +1,6 @@
 #ifndef learn_parse_h
 #define learn_parse_h
 
-i8 atpAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-i8 atcAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-i8 ccAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-i8 pbAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
-
-CvBase cvBases[5]; // First one is not used.
-WriteFunction_t *cvWrites[5] = {0, 0, 0, 0, 0}; // First one is not used.
-
 void learn_parse_keys(u8 c, u8 n, u8 v, u8 r, u8 parse_cntr)
 {
     i8 r_base;
@@ -16,10 +8,54 @@ void learn_parse_keys(u8 c, u8 n, u8 v, u8 r, u8 parse_cntr)
 
     if ( c >= 9 && c <= 12 ) // Percussion
     {
-        keyAddresses[c] = r; // Link base address to midi channel.
-        notes_writes[r][n] = on_trigger_velocity; // Attach base function.
+        if ( keyAddresses[c] == -1 ) {
+            keyAddresses[c] = r; // Link base address to midi channel.
+        }
+        i8 kA = keyAddresses[c];
 
+        // Clear note with the same row on this address.
+        for ( i8 i = 0; i < 128; ++i ) {
+            if ( note_addresses[kA][i] == r ) {
+                note_addresses[kA][i] = -1;
+            }
+        }
+
+        note_adresses[kA][n] = r;
         notes_bases[r].row = r;
+
+        // Count amount of notes programmed on this address
+        u8 n_cnt = 0;
+        for ( i8 i = 0; i < 128; ++i ) {
+            if ( note_addresses[kA][i] > -1 ) n_cnt += 1;
+        }
+
+        // Attach function:
+        if ( c == 9 || n_cnt == 1 ) { // Attach normal function.
+            notes_writes[r] = on_trigger_velocity;
+        }
+        else if ( c == 10 ) { // Attach choke function to 2 rows.
+            note_bases[r].chokegroup_other_cv_pins = &note_shared.chokegroup_other_cv_pins[0];
+
+            u8 n_cnt = 0;
+            for ( i8 i = 0; i < 128; ++i ) {
+                i8 r_any = note_addresses[kA][i];
+                if ( r_any > -1 ) {
+                    notes_writes[r_any] = on_trigger_velocity_choke; // Attach base function.
+                    note_bases[r_any].chokegroup_other_pins_amount = 1;
+                    if ( r_any != r ) note_bases[r].chokegroup_other_cv_pins[0] = r;
+                    if ( ++n_cnt == 2 ) break;
+                }
+            }
+        }
+        else { // Attach choke function to 2 or more rows.
+            for ( i8 i = 0; i < 128; ++i ) {
+                i8 r = note_addresses[kA][i];
+                if ( r > -1 ) {
+                    notes_writes[r] = on_trigger_velocity_choke; // Attach base function.
+                    //.....
+                }
+            }
+        }
     }
     else
     {
@@ -32,8 +68,8 @@ void learn_parse_keys(u8 c, u8 n, u8 v, u8 r, u8 parse_cntr)
                 keyAddresses[c] = r; // Link base address to midi channel.
 
                 // Unique for keys.
-                for ( i8 i = 0; i < 128; ++i ) { // Attach on_keys function to all notes.
-                    notes_writes[r][i] = on_keys;
+                for ( i8 i = 0; i < 4; ++i ) { // Attach on_keys function to all notes.
+                    notes_writes[r] = on_keys;
                 }
 
                 notes_bases[r].address = r;
@@ -429,11 +465,11 @@ void learn_parse_type(u8 t, c, d1, d2)
         {
             // Be sure that something is going to be written in this r before the code comes here!
             // Clear.
-            for_each(atpAddresses, if r + 1 then 0);
-            for_each(atcAddresses, if r + 1 then 0);
-            for_each(ccAddresses, if r + 1 then 0);
-            for_each(pbAddresses, if r + 1 then 0);
-            for_each(keyAddresses, if r + 1 then 0);
+            for_each(atpAddresses, if r then 0);
+            for_each(atcAddresses, if r then 0);
+            for_each(ccAddresses, if r then 0);
+            for_each(pbAddresses, if r then 0);
+            for_each(keyAddresses, if r then 0);
 
             switch ( t ) {
                 case Midi::NoteOn:

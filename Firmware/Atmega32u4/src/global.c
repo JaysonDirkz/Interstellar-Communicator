@@ -13,6 +13,7 @@ i8 trigCounter[4] = {-1, -1, -1, -1};
 
 //Functions.
 typedef void WriteFunction_t(KeysBase *); // For declaring function pointers.
+void wrRet(KeysBase *b) { return; }
 
 
 
