@@ -1,0 +1,164 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 8,
+			"minor" : 3,
+			"revision" : 1,
+			"architecture" : "x64",
+			"modernui" : 1
+		}
+,
+		"classnamespace" : "dsp.gen",
+		"rect" : [ 42.0, -995.0, 890.0, 953.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 12.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 1,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 1,
+		"objectsnaponopen" : 1,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"lefttoolbarpinned" : 0,
+		"toptoolbarpinned" : 0,
+		"righttoolbarpinned" : 0,
+		"bottomtoolbarpinned" : 0,
+		"toolbars_unpinned_last_save" : 0,
+		"tallnewobj" : 0,
+		"boxanimatetime" : 200,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"style" : "",
+		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
+		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-9",
+					"linecount" : 3,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 167.0, 928.0, 229.0, 48.0 ],
+					"text" : "BUGS:\n- count reassign bij note release gaat soms niet goed."
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-7",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 779.0, 927.0, 91.0, 22.0 ],
+					"text" : "out 3 nextcount"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-6",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 428.5, 927.0, 87.0, 22.0 ],
+					"text" : "out 2 keycount"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-1",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 6.0, 5.0, 50.0, 22.0 ],
+					"text" : "in 1 key"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-2",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 244.0, 5.0, 57.0, 22.0 ],
+					"text" : "in 2 state"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"code" : "Data keyCounts(128);\r\nData keys(10);\r\nData nextcount(10);\r\n\r\nHistory count(0);\r\nHistory amount(0);\r\nHistory countHist(-1);\r\n\r\nHistory init(1);\r\n\r\nif ( init )\r\n{\r\n\tfor ( i = 0; i < 128; i = i + 1 )\r\n\t{\r\n\t\tkeyCounts.poke(-1, i);\r\n\t\tnextcount.poke(i + 1, i);\r\n\t}\r\n\t\r\n\tinit = 0;\r\n}\r\n\r\nkey = in1;\r\n\r\nif ( in2 ) // note on\r\n{\r\n\tif ( keyCounts.peek(key) == -1 ) // key not yet added\r\n\t{\r\n\t\t// give current counter val to the key.\r\n\t\tkeys.poke(key, count);\r\n\t\t\r\n\t\t// add key to current count.\r\n        keyCounts.poke(count, key);\r\n\r\n\t\t// set the counter on the next value.\r\n\t\tcount = nextcount.peek(count);\r\n\t\t\r\n\t\t// increment the amount of keys pushed down.\r\n        amount = amount + 1;\r\n    }\r\n}\r\nelse // note off\r\n{\r\n\tkeyCount = keyCounts.peek(key);\r\n\t\r\n\tif ( keyCount > -1 ) // key was added\r\n    {\r\n\t\tif ( keyCount != count )\r\n\t\t{\r\n\t\t\tif ( keyCount < count ) // count of released key is lower than current count\r\n        \t{\r\n\t\t\t\t// write counter val as the next counter val in relation to the count at the released key.\r\n            \tnextcount.poke(count, keyCount);\r\n\t\r\n\t\t\t\t// set counter val to count at released key.\r\n            \tcount = keyCount;\r\n        \t}\r\n        \telse // count of released key is higher than current count\r\n        \t{\r\n\t\t\t\t// write the next count val as the next count val for the count at the released key.\r\n            \tnextcount.poke(nextcount.peek(count), keyCount);\r\n\t\r\n\t\t\t\t// write keycount as the next count for the current(lower) count.\r\n            \tnextcount.poke(keyCount, count);\r\n        \t}\r\n\t\r\n     \t\tkeys.poke(-1, keyCount);\r\n        \tkeyCounts.poke(-1, key);\r\n        \tamount = amount - 1;\r\n     \t\t// countHist = count;\r\n\t\t}\r\n    }\r\n}\r\n\r\nout1 = amount;\r\nout2 = keyCounts.peek(key);\r\nout3 = count;",
+					"fontface" : 0,
+					"fontname" : "<Monospaced>",
+					"fontsize" : 12.0,
+					"id" : "obj-3",
+					"maxclass" : "codebox",
+					"numinlets" : 2,
+					"numoutlets" : 3,
+					"outlettype" : [ "", "", "" ],
+					"patching_rect" : [ 6.0, 44.0, 864.0, 867.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-4",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 6.0, 927.0, 79.0, 22.0 ],
+					"text" : "out 1 amount"
+				}
+
+			}
+ ],
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 0 ],
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 1 ],
+					"source" : [ "obj-2", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"source" : [ "obj-3", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-6", 0 ],
+					"source" : [ "obj-3", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-7", 0 ],
+					"source" : [ "obj-3", 2 ]
+				}
+
+			}
+ ]
+	}
+
+}

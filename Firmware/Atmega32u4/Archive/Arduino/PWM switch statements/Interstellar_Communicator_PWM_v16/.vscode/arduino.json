@@ -1,0 +1,7 @@
+{
+    "board": "SparkFun:avr:promicro",
+    "configuration": "cpu=16MHzatmega32U4",
+    "programmer": "Atmel STK500 development board",
+    "port": "COM5",
+    "sketch": "Interstellar_Communicator_PWM_v16.ino"
+}

@@ -1,0 +1,539 @@
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.eabi_attribute 28, 1
+   3              		.eabi_attribute 20, 1
+   4              		.eabi_attribute 21, 1
+   5              		.eabi_attribute 23, 3
+   6              		.eabi_attribute 24, 1
+   7              		.eabi_attribute 25, 1
+   8              		.eabi_attribute 26, 1
+   9              		.eabi_attribute 30, 2
+  10              		.eabi_attribute 34, 1
+  11              		.eabi_attribute 18, 4
+  12              		.file	"4_voice_synth.cpp"
+  13              		.text
+  14              		.section	.text._ZN5daisy9DaisySeedD2Ev,"axG",%progbits,_ZN5daisy9DaisySeedD5Ev,comdat
+  15              		.align	1
+  16              		.p2align 2,,3
+  17              		.weak	_ZN5daisy9DaisySeedD2Ev
+  18              		.arch armv7e-m
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu fpv5-d16
+  24              	_ZN5daisy9DaisySeedD2Ev:
+  25              		@ args = 0, pretend = 0, frame = 0
+  26              		@ frame_needed = 0, uses_anonymous_args = 0
+  27              		@ link register save eliminated.
+  28 0000 7047     		bx	lr
+  30              		.weak	_ZN5daisy9DaisySeedD1Ev
+  31              		.thumb_set _ZN5daisy9DaisySeedD1Ev,_ZN5daisy9DaisySeedD2Ev
+  32 0002 00BF     		.section	.text.__tcf_0,"ax",%progbits
+  33              		.align	1
+  34              		.p2align 2,,3
+  35              		.syntax unified
+  36              		.thumb
+  37              		.thumb_func
+  38              		.fpu fpv5-d16
+  40              	__tcf_0:
+  41              		@ args = 0, pretend = 0, frame = 0
+  42              		@ frame_needed = 0, uses_anonymous_args = 0
+  43              		@ link register save eliminated.
+  44 0000 7047     		bx	lr
+  46 0002 00BF     		.section	.text._ZL13AudioCallbackPfS_j,"ax",%progbits
+  47              		.align	1
+  48              		.p2align 2,,3
+  49              		.syntax unified
+  50              		.thumb
+  51              		.thumb_func
+  52              		.fpu fpv5-d16
+  54              	_ZL13AudioCallbackPfS_j:
+  55              		@ args = 0, pretend = 0, frame = 8
+  56              		@ frame_needed = 0, uses_anonymous_args = 0
+  57 0000 002A     		cmp	r2, #0
+  58 0002 00F08680 		beq	.L11
+  59 0006 013A     		subs	r2, r2, #1
+  60 0008 2DE9F04F 		push	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
+  61 000c 22F00103 		bic	r3, r2, #1
+  62 0010 8846     		mov	r8, r1
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 2
+
+
+  63 0012 4FF00009 		mov	r9, #0
+  64 0016 2DED048B 		vpush.64	{d8, d9}
+  65 001a 9FED3E9A 		vldr.32	s18, .L14
+  66 001e 83B0     		sub	sp, sp, #12
+  67 0020 0193     		str	r3, [sp, #4]
+  68              	.L8:
+  69 0022 3D4D     		ldr	r5, .L14+4
+  70 0024 4FF0000B 		mov	fp, #0
+  71 0028 DFF804A1 		ldr	r10, .L14+28
+  72 002c 3B4F     		ldr	r7, .L14+8
+  73              	.L6:
+  74 002e 5FFA8BF6 		uxtb	r6, fp
+  75 0032 3B48     		ldr	r0, .L14+12
+  76 0034 DFED3B8A 		vldr.32	s17, .L14+16
+  77 0038 0BF1010B 		add	fp, fp, #1
+  78 003c 3146     		mov	r1, r6
+  79 003e FFF7FEFF 		bl	_ZNK5daisy9AdcHandle8GetFloatEh
+  80 0042 F0EE400A 		vmov.f32	s1, s0
+  81 0046 B0EE000A 		vmov.f32	s0, #2.0e+0
+  82 004a 60EEA80A 		vmul.f32	s1, s1, s17
+  83 004e FFF7FEFF 		bl	powf
+  84 0052 DFED357A 		vldr.32	s15, .L14+20
+  85 0056 2846     		mov	r0, r5
+  86 0058 20EE270A 		vmul.f32	s0, s0, s15
+  87 005c 85ED020A 		vstr.32	s0, [r5, #8]
+  88 0060 FFF7FEFF 		bl	_ZN7daisysp10Oscillator12CalcPhaseIncEf
+  89 0064 5046     		mov	r0, r10
+  90 0066 85ED060A 		vstr.32	s0, [r5, #24]
+  91 006a FFF7FEFF 		bl	dsy_gpio_read
+  92 006e 311D     		adds	r1, r6, #4
+  93 0070 0446     		mov	r4, r0
+  94 0072 2B48     		ldr	r0, .L14+12
+  95 0074 C9B2     		uxtb	r1, r1
+  96 0076 0AF1060A 		add	r10, r10, #6
+  97 007a FFF7FEFF 		bl	_ZNK5daisy9AdcHandle8GetFloatEh
+  98 007e 231E     		subs	r3, r4, #0
+  99 0080 B5EE007A 		vmov.f32	s14, #2.5e-1
+ 100 0084 2846     		mov	r0, r5
+ 101 0086 18BF     		it	ne
+ 102 0088 0123     		movne	r3, #1
+ 103 008a 2435     		adds	r5, r5, #36
+ 104 008c 07EE903A 		vmov	s15, r3	@ int
+ 105 0090 F8EEE77A 		vcvt.f32.s32	s15, s15
+ 106 0094 67EE877A 		vmul.f32	s15, s15, s14
+ 107 0098 27EE800A 		vmul.f32	s0, s15, s0
+ 108 009c 05ED080A 		vstr.32	s0, [r5, #-32]
+ 109 00a0 FFF7FEFF 		bl	_ZN7daisysp10Oscillator7ProcessEv
+ 110 00a4 06F10801 		add	r1, r6, #8
+ 111 00a8 1D48     		ldr	r0, .L14+12
+ 112 00aa B0EE408A 		vmov.f32	s16, s0
+ 113 00ae C9B2     		uxtb	r1, r1
+ 114 00b0 FFF7FEFF 		bl	_ZNK5daisy9AdcHandle8GetFloatEh
+ 115 00b4 F6EE007A 		vmov.f32	s15, #5.0e-1
+ 116 00b8 60EE280A 		vmul.f32	s1, s0, s17
+ 117 00bc B0EE000A 		vmov.f32	s0, #2.0e+0
+ 118 00c0 60EEA70A 		vmul.f32	s1, s1, s15
+ 119 00c4 FFF7FEFF 		bl	powf
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 3
+
+
+ 120 00c8 F0EE407A 		vmov.f32	s15, s0
+ 121 00cc 9FED177A 		vldr.32	s14, .L14+24
+ 122 00d0 3846     		mov	r0, r7
+ 123 00d2 B0EE480A 		vmov.f32	s0, s16
+ 124 00d6 4437     		adds	r7, r7, #68
+ 125 00d8 67EE877A 		vmul.f32	s15, s15, s14
+ 126 00dc 47ED0F7A 		vstr.32	s15, [r7, #-60]
+ 127 00e0 FFF7FEFF 		bl	_ZN7daisysp10MoogLadder7ProcessEf
+ 128 00e4 BBF1040F 		cmp	fp, #4
+ 129 00e8 39EE009A 		vadd.f32	s18, s18, s0
+ 130 00ec 9FD1     		bne	.L6
+ 131 00ee 019A     		ldr	r2, [sp, #4]
+ 132 00f0 09F10203 		add	r3, r9, #2
+ 133 00f4 88ED009A 		vstr.32	s18, [r8]
+ 134 00f8 08F10808 		add	r8, r8, #8
+ 135 00fc 9145     		cmp	r9, r2
+ 136 00fe 08ED019A 		vstr.32	s18, [r8, #-4]
+ 137 0102 01D0     		beq	.L4
+ 138 0104 9946     		mov	r9, r3
+ 139 0106 8CE7     		b	.L8
+ 140              	.L4:
+ 141 0108 03B0     		add	sp, sp, #12
+ 142              		@ sp needed
+ 143 010a BDEC048B 		vldm	sp!, {d8-d9}
+ 144 010e BDE8F08F 		pop	{r4, r5, r6, r7, r8, r9, r10, fp, pc}
+ 145              	.L11:
+ 146 0112 7047     		bx	lr
+ 147              	.L15:
+ 148              		.align	2
+ 149              	.L14:
+ 150 0114 00000000 		.word	0
+ 151 0118 00000000 		.word	.LANCHOR0
+ 152 011c 00000000 		.word	.LANCHOR2
+ 153 0120 40000000 		.word	.LANCHOR3+64
+ 154 0124 08AC2A41 		.word	1093315592
+ 155 0128 00005C41 		.word	1096548352
+ 156 012c 0000DC42 		.word	1121714176
+ 157 0130 00000000 		.word	.LANCHOR1
+ 159              		.section	.text.__tcf_2,"ax",%progbits
+ 160              		.align	1
+ 161              		.p2align 2,,3
+ 162              		.syntax unified
+ 163              		.thumb
+ 164              		.thumb_func
+ 165              		.fpu fpv5-d16
+ 167              	__tcf_2:
+ 168              		@ args = 0, pretend = 0, frame = 0
+ 169              		@ frame_needed = 0, uses_anonymous_args = 0
+ 170              		@ link register save eliminated.
+ 171 0000 7047     		bx	lr
+ 173 0002 00BF     		.section	.text.__tcf_1,"ax",%progbits
+ 174              		.align	1
+ 175              		.p2align 2,,3
+ 176              		.syntax unified
+ 177              		.thumb
+ 178              		.thumb_func
+ 179              		.fpu fpv5-d16
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 4
+
+
+ 181              	__tcf_1:
+ 182              		@ args = 0, pretend = 0, frame = 0
+ 183              		@ frame_needed = 0, uses_anonymous_args = 0
+ 184              		@ link register save eliminated.
+ 185 0000 7047     		bx	lr
+ 187 0002 00BF     		.section	.text.startup.main,"ax",%progbits
+ 188              		.align	1
+ 189              		.p2align 2,,3
+ 190              		.global	main
+ 191              		.syntax unified
+ 192              		.thumb
+ 193              		.thumb_func
+ 194              		.fpu fpv5-d16
+ 196              	main:
+ 197              		@ args = 0, pretend = 0, frame = 48
+ 198              		@ frame_needed = 0, uses_anonymous_args = 0
+ 199 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 200 0004 6E48     		ldr	r0, .L23
+ 201 0006 0E25     		movs	r5, #14
+ 202 0008 6E4C     		ldr	r4, .L23+4
+ 203 000a 6F4E     		ldr	r6, .L23+8
+ 204 000c 6F4F     		ldr	r7, .L23+12
+ 205 000e 2DED028B 		vpush.64	{d8}
+ 206 0012 8CB0     		sub	sp, sp, #48
+ 207 0014 FFF7FEFF 		bl	_ZN5daisy9DaisySeed9ConfigureEv
+ 208 0018 6948     		ldr	r0, .L23
+ 209 001a FFF7FEFF 		bl	_ZN5daisy9DaisySeed4InitEv
+ 210 001e 6848     		ldr	r0, .L23
+ 211 0020 FFF7FEFF 		bl	_ZN5daisy9DaisySeed15AudioSampleRateEv
+ 212 0024 F7EE007A 		vmov.f32	s15, #1.0e+0
+ 213 0028 B0EE408A 		vmov.f32	s16, s0
+ 214 002c C7EE808A 		vdiv.f32	s17, s15, s0
+ 215              	.L19:
+ 216 0030 0023     		movs	r3, #0
+ 217 0032 9FED670A 		vldr.32	s0, .L23+16
+ 218 0036 4FF07C58 		mov	r8, #1056964608
+ 219 003a 2046     		mov	r0, r4
+ 220 003c 6361     		str	r3, [r4, #20]	@ float
+ 221 003e 84ED038A 		vstr.32	s16, [r4, #12]
+ 222 0042 C4ED048A 		vstr.32	s17, [r4, #16]
+ 223 0046 84ED020A 		vstr.32	s0, [r4, #8]
+ 224 004a C4F80480 		str	r8, [r4, #4]	@ float
+ 225 004e FFF7FEFF 		bl	_ZN7daisysp10Oscillator12CalcPhaseIncEf
+ 226 0052 F0EE407A 		vmov.f32	s15, s0
+ 227 0056 0223     		movs	r3, #2
+ 228 0058 B0EE480A 		vmov.f32	s0, s16
+ 229 005c 3046     		mov	r0, r6
+ 230 005e 4436     		adds	r6, r6, #68
+ 231 0060 C4ED067A 		vstr.32	s15, [r4, #24]
+ 232 0064 04F8243B 		strb	r3, [r4], #36
+ 233 0068 FFF7FEFF 		bl	_ZN7daisysp10MoogLadder4InitEf
+ 234 006c 2946     		mov	r1, r5
+ 235 006e 013D     		subs	r5, r5, #1
+ 236 0070 5348     		ldr	r0, .L23
+ 237 0072 46F8408C 		str	r8, [r6, #-64]	@ float
+ 238 0076 EDB2     		uxtb	r5, r5
+ 239 0078 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 5
+
+
+ 240 007c 0346     		mov	r3, r0	@ movhi
+ 241 007e 0BA9     		add	r1, sp, #44
+ 242 0080 3846     		mov	r0, r7
+ 243 0082 ADF82C30 		strh	r3, [sp, #44]	@ movhi
+ 244 0086 FFF7FEFF 		bl	_ZN5daisy6GateIn4InitEP12dsy_gpio_pin
+ 245 008a 0A2D     		cmp	r5, #10
+ 246 008c 07F10607 		add	r7, r7, #6
+ 247 0090 CED1     		bne	.L19
+ 248 0092 0F21     		movs	r1, #15
+ 249 0094 4A48     		ldr	r0, .L23
+ 250 0096 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 251 009a 0346     		mov	r3, r0	@ movhi
+ 252 009c 4D48     		ldr	r0, .L23+20
+ 253 009e ADF80030 		strh	r3, [sp]	@ movhi
+ 254 00a2 0099     		ldr	r1, [sp]
+ 255 00a4 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 256 00a8 1021     		movs	r1, #16
+ 257 00aa 4548     		ldr	r0, .L23
+ 258 00ac FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 259 00b0 0346     		mov	r3, r0	@ movhi
+ 260 00b2 4948     		ldr	r0, .L23+24
+ 261 00b4 ADF80430 		strh	r3, [sp, #4]	@ movhi
+ 262 00b8 0199     		ldr	r1, [sp, #4]
+ 263 00ba FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 264 00be 1121     		movs	r1, #17
+ 265 00c0 3F48     		ldr	r0, .L23
+ 266 00c2 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 267 00c6 0346     		mov	r3, r0	@ movhi
+ 268 00c8 4448     		ldr	r0, .L23+28
+ 269 00ca ADF80830 		strh	r3, [sp, #8]	@ movhi
+ 270 00ce 0299     		ldr	r1, [sp, #8]
+ 271 00d0 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 272 00d4 1221     		movs	r1, #18
+ 273 00d6 3A48     		ldr	r0, .L23
+ 274 00d8 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 275 00dc 0346     		mov	r3, r0	@ movhi
+ 276 00de 4048     		ldr	r0, .L23+32
+ 277 00e0 ADF80C30 		strh	r3, [sp, #12]	@ movhi
+ 278 00e4 0399     		ldr	r1, [sp, #12]
+ 279 00e6 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 280 00ea 1321     		movs	r1, #19
+ 281 00ec 3448     		ldr	r0, .L23
+ 282 00ee FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 283 00f2 0346     		mov	r3, r0	@ movhi
+ 284 00f4 3B48     		ldr	r0, .L23+36
+ 285 00f6 ADF81030 		strh	r3, [sp, #16]	@ movhi
+ 286 00fa 0499     		ldr	r1, [sp, #16]
+ 287 00fc FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 288 0100 1421     		movs	r1, #20
+ 289 0102 2F48     		ldr	r0, .L23
+ 290 0104 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 291 0108 0346     		mov	r3, r0	@ movhi
+ 292 010a 3748     		ldr	r0, .L23+40
+ 293 010c ADF81430 		strh	r3, [sp, #20]	@ movhi
+ 294 0110 0599     		ldr	r1, [sp, #20]
+ 295 0112 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 296 0116 1521     		movs	r1, #21
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 6
+
+
+ 297 0118 2948     		ldr	r0, .L23
+ 298 011a FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 299 011e 0346     		mov	r3, r0	@ movhi
+ 300 0120 3248     		ldr	r0, .L23+44
+ 301 0122 ADF81830 		strh	r3, [sp, #24]	@ movhi
+ 302 0126 0699     		ldr	r1, [sp, #24]
+ 303 0128 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 304 012c 1621     		movs	r1, #22
+ 305 012e 2448     		ldr	r0, .L23
+ 306 0130 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 307 0134 0346     		mov	r3, r0	@ movhi
+ 308 0136 2E48     		ldr	r0, .L23+48
+ 309 0138 ADF81C30 		strh	r3, [sp, #28]	@ movhi
+ 310 013c 0799     		ldr	r1, [sp, #28]
+ 311 013e FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 312 0142 1721     		movs	r1, #23
+ 313 0144 1E48     		ldr	r0, .L23
+ 314 0146 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 315 014a 0346     		mov	r3, r0	@ movhi
+ 316 014c 2948     		ldr	r0, .L23+52
+ 317 014e ADF82030 		strh	r3, [sp, #32]	@ movhi
+ 318 0152 0899     		ldr	r1, [sp, #32]
+ 319 0154 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 320 0158 1821     		movs	r1, #24
+ 321 015a 1948     		ldr	r0, .L23
+ 322 015c FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 323 0160 0346     		mov	r3, r0	@ movhi
+ 324 0162 2548     		ldr	r0, .L23+56
+ 325 0164 ADF82430 		strh	r3, [sp, #36]	@ movhi
+ 326 0168 0999     		ldr	r1, [sp, #36]
+ 327 016a FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 328 016e 1921     		movs	r1, #25
+ 329 0170 1348     		ldr	r0, .L23
+ 330 0172 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 331 0176 0346     		mov	r3, r0	@ movhi
+ 332 0178 2048     		ldr	r0, .L23+60
+ 333 017a ADF82830 		strh	r3, [sp, #40]	@ movhi
+ 334 017e 0A99     		ldr	r1, [sp, #40]
+ 335 0180 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 336 0184 1C21     		movs	r1, #28
+ 337 0186 0E48     		ldr	r0, .L23
+ 338 0188 FFF7FEFF 		bl	_ZN5daisy9DaisySeed6GetPinEh
+ 339 018c 0346     		mov	r3, r0	@ movhi
+ 340 018e 1C48     		ldr	r0, .L23+64
+ 341 0190 ADF82C30 		strh	r3, [sp, #44]	@ movhi
+ 342 0194 0B99     		ldr	r1, [sp, #44]
+ 343 0196 FFF7FEFF 		bl	_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+ 344 019a 0423     		movs	r3, #4
+ 345 019c 0C22     		movs	r2, #12
+ 346 019e 0D49     		ldr	r1, .L23+20
+ 347 01a0 1848     		ldr	r0, .L23+68
+ 348 01a2 FFF7FEFF 		bl	_ZN5daisy9AdcHandle4InitEPNS_16AdcChannelConfigEjNS0_12OverSamplingE
+ 349 01a6 1748     		ldr	r0, .L23+68
+ 350 01a8 FFF7FEFF 		bl	_ZN5daisy9AdcHandle5StartEv
+ 351 01ac 0121     		movs	r1, #1
+ 352 01ae 0448     		ldr	r0, .L23
+ 353 01b0 FFF7FEFF 		bl	_ZN5daisy9DaisySeed17SetAudioBlockSizeEj
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 7
+
+
+ 354 01b4 1449     		ldr	r1, .L23+72
+ 355 01b6 0248     		ldr	r0, .L23
+ 356 01b8 FFF7FEFF 		bl	_ZN5daisy9DaisySeed10StartAudioEPFvPfS1_jE
+ 357              	.L20:
+ 358 01bc FEE7     		b	.L20
+ 359              	.L24:
+ 360 01be 00BF     		.align	2
+ 361              	.L23:
+ 362 01c0 00000000 		.word	.LANCHOR3
+ 363 01c4 00000000 		.word	.LANCHOR0
+ 364 01c8 00000000 		.word	.LANCHOR2
+ 365 01cc 00000000 		.word	.LANCHOR1
+ 366 01d0 0000C842 		.word	1120403456
+ 367 01d4 00000000 		.word	.LANCHOR4
+ 368 01d8 11000000 		.word	.LANCHOR4+17
+ 369 01dc 22000000 		.word	.LANCHOR4+34
+ 370 01e0 33000000 		.word	.LANCHOR4+51
+ 371 01e4 44000000 		.word	.LANCHOR4+68
+ 372 01e8 55000000 		.word	.LANCHOR4+85
+ 373 01ec 66000000 		.word	.LANCHOR4+102
+ 374 01f0 77000000 		.word	.LANCHOR4+119
+ 375 01f4 88000000 		.word	.LANCHOR4+136
+ 376 01f8 99000000 		.word	.LANCHOR4+153
+ 377 01fc AA000000 		.word	.LANCHOR4+170
+ 378 0200 BB000000 		.word	.LANCHOR4+187
+ 379 0204 40000000 		.word	.LANCHOR3+64
+ 380 0208 00000000 		.word	_ZL13AudioCallbackPfS_j
+ 382              		.section	.text.startup._GLOBAL__sub_I_main,"ax",%progbits
+ 383              		.align	1
+ 384              		.p2align 2,,3
+ 385              		.syntax unified
+ 386              		.thumb
+ 387              		.thumb_func
+ 388              		.fpu fpv5-d16
+ 390              	_GLOBAL__sub_I_main:
+ 391              		@ args = 0, pretend = 0, frame = 0
+ 392              		@ frame_needed = 0, uses_anonymous_args = 0
+ 393 0000 08B5     		push	{r3, lr}
+ 394 0002 0B4A     		ldr	r2, .L27
+ 395 0004 0B49     		ldr	r1, .L27+4
+ 396 0006 0C48     		ldr	r0, .L27+8
+ 397 0008 FFF7FEFF 		bl	__aeabi_atexit
+ 398 000c 084A     		ldr	r2, .L27
+ 399 000e 0B49     		ldr	r1, .L27+12
+ 400 0010 0020     		movs	r0, #0
+ 401 0012 FFF7FEFF 		bl	__aeabi_atexit
+ 402 0016 064A     		ldr	r2, .L27
+ 403 0018 0949     		ldr	r1, .L27+16
+ 404 001a 0020     		movs	r0, #0
+ 405 001c FFF7FEFF 		bl	__aeabi_atexit
+ 406 0020 034A     		ldr	r2, .L27
+ 407 0022 0849     		ldr	r1, .L27+20
+ 408 0024 0020     		movs	r0, #0
+ 409 0026 BDE80840 		pop	{r3, lr}
+ 410 002a FFF7FEBF 		b	__aeabi_atexit
+ 411              	.L28:
+ 412 002e 00BF     		.align	2
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 8
+
+
+ 413              	.L27:
+ 414 0030 00000000 		.word	__dso_handle
+ 415 0034 00000000 		.word	_ZN5daisy9DaisySeedD1Ev
+ 416 0038 00000000 		.word	.LANCHOR3
+ 417 003c 00000000 		.word	__tcf_0
+ 418 0040 00000000 		.word	__tcf_1
+ 419 0044 00000000 		.word	__tcf_2
+ 421              		.section	.init_array,"aw",%init_array
+ 422              		.align	2
+ 423 0000 00000000 		.word	_GLOBAL__sub_I_main(target1)
+ 424              		.section	.bss._ZL3osc,"aw",%nobits
+ 425              		.align	2
+ 426              		.set	.LANCHOR0,. + 0
+ 429              	_ZL3osc:
+ 430 0000 00000000 		.space	144
+ 430      00000000 
+ 430      00000000 
+ 430      00000000 
+ 430      00000000 
+ 431              		.section	.bss._ZL4seed,"aw",%nobits
+ 432              		.align	2
+ 433              		.set	.LANCHOR3,. + 0
+ 436              	_ZL4seed:
+ 437 0000 00000000 		.space	88
+ 437      00000000 
+ 437      00000000 
+ 437      00000000 
+ 437      00000000 
+ 438              		.section	.bss._ZL6filter,"aw",%nobits
+ 439              		.align	2
+ 440              		.set	.LANCHOR2,. + 0
+ 443              	_ZL6filter:
+ 444 0000 00000000 		.space	272
+ 444      00000000 
+ 444      00000000 
+ 444      00000000 
+ 444      00000000 
+ 445              		.section	.bss._ZL7adc_jay,"aw",%nobits
+ 446              		.align	2
+ 447              		.set	.LANCHOR4,. + 0
+ 450              	_ZL7adc_jay:
+ 451 0000 00000000 		.space	204
+ 451      00000000 
+ 451      00000000 
+ 451      00000000 
+ 451      00000000 
+ 452              		.section	.bss._ZL9NotGateIn,"aw",%nobits
+ 453              		.align	2
+ 454              		.set	.LANCHOR1,. + 0
+ 457              	_ZL9NotGateIn:
+ 458 0000 00000000 		.space	24
+ 458      00000000 
+ 458      00000000 
+ 458      00000000 
+ 458      00000000 
+ 459              		.hidden	__dso_handle
+ 460              		.ident	"GCC: (GNU Arm Embedded Toolchain 9-2020-q2-update) 9.3.1 20200408 (release)"
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 9
+
+
+ARM GAS  C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s 			page 10
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 4_voice_synth.cpp
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:15     .text._ZN5daisy9DaisySeedD2Ev:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:24     .text._ZN5daisy9DaisySeedD2Ev:00000000 _ZN5daisy9DaisySeedD2Ev
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:24     .text._ZN5daisy9DaisySeedD2Ev:00000000 _ZN5daisy9DaisySeedD1Ev
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:33     .text.__tcf_0:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:40     .text.__tcf_0:00000000 __tcf_0
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:47     .text._ZL13AudioCallbackPfS_j:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:54     .text._ZL13AudioCallbackPfS_j:00000000 _ZL13AudioCallbackPfS_j
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:150    .text._ZL13AudioCallbackPfS_j:00000114 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:160    .text.__tcf_2:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:167    .text.__tcf_2:00000000 __tcf_2
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:174    .text.__tcf_1:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:181    .text.__tcf_1:00000000 __tcf_1
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:188    .text.startup.main:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:196    .text.startup.main:00000000 main
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:362    .text.startup.main:000001c0 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:383    .text.startup._GLOBAL__sub_I_main:00000000 $t
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:390    .text.startup._GLOBAL__sub_I_main:00000000 _GLOBAL__sub_I_main
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:414    .text.startup._GLOBAL__sub_I_main:00000030 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:422    .init_array:00000000 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:425    .bss._ZL3osc:00000000 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:429    .bss._ZL3osc:00000000 _ZL3osc
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:432    .bss._ZL4seed:00000000 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:436    .bss._ZL4seed:00000000 _ZL4seed
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:439    .bss._ZL6filter:00000000 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:443    .bss._ZL6filter:00000000 _ZL6filter
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:446    .bss._ZL7adc_jay:00000000 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:450    .bss._ZL7adc_jay:00000000 _ZL7adc_jay
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:453    .bss._ZL9NotGateIn:00000000 $d
+C:\Users\jason\AppData\Local\Temp\ccRaTmuG.s:457    .bss._ZL9NotGateIn:00000000 _ZL9NotGateIn
+                           .group:00000000 _ZN5daisy9DaisySeedD5Ev
+
+UNDEFINED SYMBOLS
+_ZNK5daisy9AdcHandle8GetFloatEh
+powf
+_ZN7daisysp10Oscillator12CalcPhaseIncEf
+dsy_gpio_read
+_ZN7daisysp10Oscillator7ProcessEv
+_ZN7daisysp10MoogLadder7ProcessEf
+_ZN5daisy9DaisySeed9ConfigureEv
+_ZN5daisy9DaisySeed4InitEv
+_ZN5daisy9DaisySeed15AudioSampleRateEv
+_ZN7daisysp10MoogLadder4InitEf
+_ZN5daisy9DaisySeed6GetPinEh
+_ZN5daisy6GateIn4InitEP12dsy_gpio_pin
+_ZN5daisy16AdcChannelConfig10InitSingleE12dsy_gpio_pin
+_ZN5daisy9AdcHandle4InitEPNS_16AdcChannelConfigEjNS0_12OverSamplingE
+_ZN5daisy9AdcHandle5StartEv
+_ZN5daisy9DaisySeed17SetAudioBlockSizeEj
+_ZN5daisy9DaisySeed10StartAudioEPFvPfS1_jE
+__aeabi_atexit
+__dso_handle

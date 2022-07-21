@@ -1,0 +1,35 @@
+Ontwikkel eerst learning en parsing logic voor 1 kanaal.
+Een kanaal heeft toegang tot alle outputs.
+De plek van output word bepaald door de plek van de learn knop.
+
+Kijk of je dit dynamisch of met unions gaat doen.
+
+Bij uitbreiding naar 8 kanalen:
+De outputs moeten gedeeld worden. Twee manieren:
+    Statisch (o.a. unions):
+    - Al gebruikte outputs kunnen overschreven worden.
+    - In de parsing logic moet dus altijd gecheckt worden of de output kanalen nog vrij zijn. Of er moeten ergens pointers gewist worden.
+
+    Dynamisch:
+    - Al gebruikte outputs kunnen overschreven worden.
+    - De parsing logic van de kanalen waarvan de outputs overschreven zijn worden opnieuw geinitieerd (dynamisch).
+
+
+Via routermatrix van miditype X midikanaal -->
+Percussion:
+- Enkel gate, zonder choke:
+    if midi_data_note != this.key: return false;
+    globale_gateOutputBuffer[this.gateOutput] = high;
+    return true;
+
+- Gate en velocity zonder choke.
+    if call func (Enkel gate, zonder choke) == false: return;
+    globale_cv_output[this.cv_output] = midi_data_velocity;
+
+- Enkel gate, met choke:
+    if call func (Enkel gate, zonder choke) == false: return;
+    shared: for cv_output in chokeGroup: cv_output = low;
+
+- Gate en velocity, met choke:
+    if call func (Enkel gate, met choke) == false: return;
+    globale_cv_output[this.cv_output] = midi_data_velocity;

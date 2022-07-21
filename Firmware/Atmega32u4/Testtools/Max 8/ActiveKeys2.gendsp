@@ -1,0 +1,116 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 8,
+			"minor" : 3,
+			"revision" : 1,
+			"architecture" : "x64",
+			"modernui" : 1
+		}
+,
+		"classnamespace" : "dsp.gen",
+		"rect" : [ 87.0, -904.0, 939.0, 705.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 12.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 1,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 1,
+		"objectsnaponopen" : 1,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"lefttoolbarpinned" : 0,
+		"toptoolbarpinned" : 0,
+		"righttoolbarpinned" : 0,
+		"bottomtoolbarpinned" : 0,
+		"toolbars_unpinned_last_save" : 0,
+		"tallnewobj" : 0,
+		"boxanimatetime" : 200,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"style" : "",
+		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
+		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-1",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 6.0, 5.0, 50.0, 22.0 ],
+					"text" : "in 1 key"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-2",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 244.0, 5.0, 57.0, 22.0 ],
+					"text" : "in 2 state"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"code" : "Buffer keyPositions;\r\nData queue(10);\r\n\r\nHistory queueCount(0);\r\nHistory queueEnd(0);\r\n    \r\nHistory amount(0);\r\n\r\nHistory first(1);\r\n\r\nkeyMaxAmount = 10;\r\n\r\nkey = in1;\r\nstate = in2;\r\n\r\nif ( first )\r\n{\r\n\tfirst = 0;\r\n\t\r\n\tfor ( i = 0; i < 128; i = i + 1 )\r\n\t{\r\n    \t//keyPositions[i] = -1;\r\n\t\tkeyPositions.poke(-1, i);\r\n\t}\r\n\r\n    for ( i = 0; i < 10; i = i + 1 )\r\n\t{\r\n        //queue[i] = 0;\r\n\t\tqueue.poke(0, i);\r\n    }\r\n}\r\n\r\nif ( state )\r\n{\r\n\tif ( keyPositions.peek(key) == -1 && amount < keyMaxAmount ) // key not yet added\r\n    {\r\n        if ( queueCount == queueEnd )\r\n        {\r\n            //keyPositions[key] = amount;\r\n\t\t\tkeyPositions.poke(amount, key);\r\n\r\n            queueCount = 0;\r\n            queueEnd = 0;\r\n        }\r\n        else\r\n        {\r\n            //keyPositions[key] = queue[queueCount];\r\n\t\t\tkeyPositions.poke(queue.peek(queueCount), key);\r\n\t\t\t//++queueCount;\r\n            queueCount = queueCount + 1;\r\n\r\n\t\t\tif ( queueCount == keyMaxAmount ) queueCount = 0;\r\n        }\r\n\r\n        //++amount;\r\n\t\tamount = amount + 1;\r\n    }\r\n}\r\nelse\r\n{\r\n\tif ( keyPositions.peek(key) > -1 ) // key was added\r\n    {\r\n        //queue[queueEnd] = keyPositions[key];\r\n\t\tqueue.poke(keyPositions.peek(key), queueEnd);\r\n        //++queueEnd;\r\n\t\tqueueEnd = queueEnd + 1;\r\n\t\tif ( queueEnd == keyMaxAmount ) queueEnd = 0;\r\n\r\n        //keyPositions[key] = -1;\r\n\t\tkeyPositions.poke(-1, key);\r\n        //--amount;\r\n\t\tamount = amount - 1;\r\n    }\r\n}\r\n\r\nout1 = amount;",
+					"fontface" : 0,
+					"fontname" : "<Monospaced>",
+					"fontsize" : 12.0,
+					"id" : "obj-3",
+					"maxclass" : "codebox",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 6.0, 44.0, 864.0, 618.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-4",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 6.0, 673.0, 79.0, 22.0 ],
+					"text" : "out 1 amount"
+				}
+
+			}
+ ],
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 0 ],
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 1 ],
+					"source" : [ "obj-2", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"source" : [ "obj-3", 0 ]
+				}
+
+			}
+ ]
+	}
+
+}

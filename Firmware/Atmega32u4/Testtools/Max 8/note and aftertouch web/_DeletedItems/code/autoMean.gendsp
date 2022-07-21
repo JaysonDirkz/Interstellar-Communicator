@@ -1,0 +1,117 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 8,
+			"minor" : 3,
+			"revision" : 1,
+			"architecture" : "x64",
+			"modernui" : 1
+		}
+,
+		"classnamespace" : "dsp.gen",
+		"rect" : [ 796.0, 85.0, 698.0, 696.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 12.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 1,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 1,
+		"objectsnaponopen" : 1,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"lefttoolbarpinned" : 0,
+		"toptoolbarpinned" : 0,
+		"righttoolbarpinned" : 0,
+		"bottomtoolbarpinned" : 0,
+		"toolbars_unpinned_last_save" : 0,
+		"tallnewobj" : 0,
+		"boxanimatetime" : 200,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"style" : "",
+		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
+		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-1",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 50.0, 14.0, 52.0, 22.0 ],
+					"text" : "in 1 part"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-2",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 305.0, 14.0, 73.0, 22.0 ],
+					"text" : "in 2 position"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"code" : "Data parts(10);\r\nParam zeroPoint;\r\n\r\nHistory average(0);\r\nHistory diff(0);\r\nHistory output(0);\r\n\r\nHistory first(1);\r\nif ( first )\r\n{\r\n\tfor( i = 0; i < 10; i = i + 1 )\r\n\t{\r\n\t\tparts.poke(zeroPoint, i);\r\n\t}\r\n\t\r\n\tfirst = 0;\r\n}\r\n\r\ninPart = in1;\r\ninPosition = in2;\r\n\r\nparts.poke(inPart, inPosition);\r\n\r\namount = 0;\r\nsum = 0;\r\n\r\nfor( i = 0; i < 10; i = i + 1 )\r\n{\r\n\tif ( parts.peek(i) != zeroPoint )\r\n\t{\r\n\t\tamount = amount + 1;\r\n\t\tsum = sum + parts.peek(i);\r\n\t}\r\n}\r\n\r\namountDelta = amount.delta();\r\naverage = amount > 0 ? sum / amount : zeroPoint;\r\n\r\nif ( amount == 0 ) diff = 0;\r\nelse if( amountDelta ) diff = average - output;\r\n\r\noutput = average - diff;\r\nout1 = output;",
+					"fontface" : 0,
+					"fontname" : "<Monospaced>",
+					"fontsize" : 12.0,
+					"id" : "obj-3",
+					"maxclass" : "codebox",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 14.0, 46.0, 577.0, 358.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-4",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 20.0, 412.0, 69.0, 22.0 ],
+					"text" : "out 1 mean"
+				}
+
+			}
+ ],
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 0 ],
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 1 ],
+					"source" : [ "obj-2", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"source" : [ "obj-3", 0 ]
+				}
+
+			}
+ ],
+		"autosave" : 0
+	}
+
+}

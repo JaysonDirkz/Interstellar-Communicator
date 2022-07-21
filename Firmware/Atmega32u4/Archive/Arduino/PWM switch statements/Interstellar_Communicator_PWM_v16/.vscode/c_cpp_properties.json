@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:\\Users\\jason\\OneDrive\\Jay Electronics\\MIDI2CV_v01\\",
+                "G:\\Mijn Drive\\Arduino\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\libraries\\**",
+                "c:\\Program Files (x86)\\Arduino\\tools\\**",
+                "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "c:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\avr\\include\\**",
+                "c:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\lib\\gcc\\avr\\7.3.0\\include\\**",
+                "C:\\Users\\jason\\AppData\\Local\\Arduino15\\packages\\SparkFun\\hardware\\avr\\1.1.13\\**",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "USBCON"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64",
+            "forcedInclude": []
+        }
+    ],
+    "version": 4
+}
