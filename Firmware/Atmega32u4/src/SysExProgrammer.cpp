@@ -1,7 +1,10 @@
+#ifndef SysExProgrammer_h
+#define SysExProgrammer_h
+
 class SysExProgrammer {
     private:
     char** identifiers = nullptr;
-    uitn8_t identifierAmount = 0;
+    uint8_t identifierAmount = 0;
 
     public:
     SysExProgrammer(char** arrayOfIdentifiers, uint8_t identifierAmountIn)
@@ -17,3 +20,5 @@ class SysExProgrammer {
         }
     }
 };
+
+#endif

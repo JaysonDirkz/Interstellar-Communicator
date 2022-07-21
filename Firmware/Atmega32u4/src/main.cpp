@@ -7,10 +7,10 @@ bool debugState = 1;
 
 #include "MidiUtility.h"
 
-#include "global_declarations.c"
-#include "cv_declarations.c"
-#include "keys_declarations.c"
-#include "learn_logic.cpp"
+#include "global.c"
+#include "cv_write.c"
+#include "keys_writes.c"
+#include "learn.cpp"
 
 #define CLOCK_PIN 2
 #define RESET_PIN 3
@@ -129,6 +129,79 @@ inline uint8_t get_bitfield_buttons()
     return ~PINF & B11110000;
 }
 
+void setOutputs()
+{
+    auto currentMillis = millis();
+    static auto lastMillis = currentMillis;
+    if ( currentMillis != lastMillis )
+    {
+        lastMillis = currentMillis;
+
+        switch ( clockCounter )
+        {
+            case -1: break;
+            case 0: digitalWrite(CLOCK_PIN, LOW);
+            default: --clockCounter; break;
+        }
+
+        switch ( resetCounter )
+        {
+            case -1: break;
+            case 0: digitalWrite(RESET_PIN, LOW);
+            default: --resetCounter; break;
+        }
+        
+        for ( int8_t row = 0; row < 4; ++row )
+        {
+            switch ( trigCounter[row] )
+            {
+                case -1: break;
+                case 0: gate_pins[row] = false;
+                default: --trigCounter[row]; break;
+            }
+        }
+    }
+
+    for ( int8_t i = 0; i < 4; ++i ) {
+        cv_out(i);
+    }
+
+    for ( int8_t i = 0; i < 4; ++i ) {
+        gate_out(i);
+    }
+}
+
+void cv_out(int8_t row)
+{
+	// uint8_t value = number >> rightShift;
+	switch (row)
+	{
+		case 0: PWM6 = cv_pins[row]; break;
+		case 1: PWM9 = cv_pins[row]; break;
+		case 2: PWM10 = cv_pins[row]; break;
+		case 3: PWM13 = cv_pins[row]; break;
+        default: break;
+	}
+
+     // debug
+	 if ( ! MIDI.getThruState() ) {
+	 	MIDI.sendControlChange(0, cv_pins[row] >> 7, row + 1);
+	 	MIDI.sendControlChange(32, cv_pins[row] & 127, row + 1);
+	 }
+}
+
+void gate_out(int8_t row)
+{
+	const int8_t GATES[4] = {GATE_1_PIN, GATE_2_PIN, GATE_3_PIN, GATE_4_PIN};
+
+	digitalWrite(GATES[row], gate_pins[row]);
+
+    // debug
+	 if ( ! MIDI.getThruState() ) {
+	 	MIDI.sendNoteOn(0, gate_pins[row], row + 1);
+	 }
+}
+
 void loop()
 {
     // Check buttons.
@@ -144,7 +217,7 @@ void loop()
         unsigned long t_delta = t_now - t_0;
         if ( t_delta > 300 ) {
             do {
-                b_last = learn_midi();
+                b_last = learn_parse_midi();
             } while ( b_last );
         }
     }
@@ -208,127 +281,4 @@ void loop()
     }
 
     setOutputs();
-}
-
-int8_t clockCounter = -1;
-int8_t resetCounter = -1;
-int8_t trigCounter[4] = {-1, -1, -1, -1};
-
-void setOutputs()
-{
-    auto currentMillis = millis();
-    static auto lastMillis = currentMillis;
-    if ( currentMillis != lastMillis )
-    {
-        lastMillis = currentMillis;
-
-        switch ( clockCounter )
-        {
-            case -1: break;
-            case 0: digitalWrite(CLOCK_PIN, LOW);
-            default: --clockCounter; break;
-        }
-
-        switch ( resetCounter )
-        {
-            case -1: break;
-            case 0: digitalWrite(RESET_PIN, LOW);
-            default: --resetCounter; break;
-        }
-        
-        for ( int8_t row = 0; row < 4; ++row )
-        {
-            switch ( trigCounter[row] )
-            {
-                case -1: break;
-                case 0: gate_pins[row] = false;
-                default: --trigCounter[row]; break;
-            }
-        }
-    }
-
-    for ( int8_t i = 0; i < 4; ++i ) {
-        cv_out(i);
-    }
-
-    for ( int8_t i = 0; i < 4; ++i ) {
-        gate_out(i);
-    }
-}
-
-void clearRowData()
-{
-    for ( int8_t row = 0; row < rowAmount; ++row )
-    {
-        rowNote[row] = -1;
-    }
-}
-
-void clearKeysActive()
-{
-    for ( int8_t addr = 0; addr < keysActiveSize; ++addr )
-    {
-        keysActive[addr].reset();
-    }
-}
-
-uint8_t learn_midi()
-{
-    uint8_t b_now = get_bitfield_buttons();
-    if ( MIDI.read() ) {
-        switch ( MIDI.getType() ) {
-            case NoteOn:
-            case NoteOff:
-            case AfterTouchPoly:
-            case AfterTouchChannel:
-            case PitchBend:
-            case ControlChange:
-                learn(Midi.getType(), MIDI.getChannel());
-            break;
-        }
-    }
-
-    static uint8_t b_saved = 0;
-    bool b_changed = b_now != b_saved; b_saved = b_now;
-    if ( b_changed && b_now == 0 ) {
-        // Save to EEPROM.
-        delay(200); // against too much writes.
-        // cvBases.
-        // keysBases.
-        // keysGlobal.
-        // all addresses.
-    }
-
-    return b_now;
-}
-
-void cv_out(int8_t row)
-{
-	// uint8_t value = number >> rightShift;
-	switch (row)
-	{
-		case 0: PWM6 = cv_pins[row]; break;
-		case 1: PWM9 = cv_pins[row]; break;
-		case 2: PWM10 = cv_pins[row]; break;
-		case 3: PWM13 = cv_pins[row]; break;
-        default: break;
-	}
-
-     // debug
-	 if ( ! MIDI.getThruState() ) {
-	 	MIDI.sendControlChange(0, cv_pins[row] >> 7, row + 1);
-	 	MIDI.sendControlChange(32, cv_pins[row] & 127, row + 1);
-	 }
-}
-
-void gate_out(int8_t row)
-{
-	const int8_t GATES[4] = {GATE_1_PIN, GATE_2_PIN, GATE_3_PIN, GATE_4_PIN};
-
-	digitalWrite(GATES[row], gate_pins[row]);
-
-    // debug
-	 if ( ! MIDI.getThruState() ) {
-	 	MIDI.sendNoteOn(0, gate_pins[row], row + 1);
-	 }
 }

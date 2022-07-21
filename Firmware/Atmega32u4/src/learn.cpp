@@ -1,3 +1,6 @@
+#ifndef learn_parse_h
+#define learn_parse_h
+
 int8_t atpAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
 int8_t atcAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
 int8_t ccAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
@@ -6,172 +9,122 @@ int8_t pbAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 
 CvBase cvBases[5]; // First one is not used.
 WriteFunction_t *cvWrites[5] = {0, 0, 0, 0, 0}; // First one is not used.
 
-int8_t globalAddrCnt = 0;
-
-void learn()
+void learn_parse_keys(uint_t c, n, v, r, voice)
 {
-    globalAddrCnt = 0; // Reset global address counter.
-    // address.fill(); // Reset all global addresses.
-    // clearRowData(); // Reset global rowNote data.
-    // clearKeysActive();
+    uint8_t a = r + 1; // address.
 
-    int8_t channel = MIDI.getChannel() - 1;
+    if ( parse_cntr > 0 ) last_voice = parse_cntr - 1;
 
-
-
-    
-    // Program the note type, velocity or aftertouch for each row.
-    globalAddrCnt = 0;
-	for ( int8_t row = 0; row < 4; ++row )
-	{
-        if ( (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
-        {
-            // Be sure that something is going to be written in this row before the code comes here!
-            // Clear.
-            for_each(atpAddresses, if row + 1 then 0);
-            for_each(atcAddresses, if row + 1 then 0);
-            for_each(ccAddresses, if row + 1 then 0);
-            for_each(pbAddresses, if row + 1 then 0);
-            for_each(keyAddresses, if row + 1 then 0);
-
-            switch ( MIDI.getType() ) {
-                case NoteOn:
-                case NoteOff:
-                case AfterTouchPoly:
-                case AfterTouchChannel:
-                case PitchBend:
-                case ControlChange:
-                    learn(Midi.getType(), MIDI.getChannel());
-                break;
-            }
-
-            int8_t last_voice;
-
-            switch ( channels.getChannelType(channel) )
-            {
-                case ChannelType::KeysCycling:
-                case ChannelType::KeysSplit:
-                    switch ( globalAddrCnt )
-                    {
-                        case 0:
-                            //Clear more stuff maybe?
-
-                            last_voice = row;
-
-                            // Set.
-                            keyAddresses[MIDI.getChannel()] = row + 1;
-                            keysBases[row + 1].row_g_p[last_voice] = row;
-                            keysBases[row + 1].voice_next = 0;
-                            //.....etc
-                        break;
-                        
-                        case 1:
-
-                            keysBases[row + 1].row_v[last_voice] = row;
-                            last_voice = row;
-                            keysBases[row + 1].row_v[last_voice] = row;
-                        break;
-                        
-                        case 2:
-                        // Bij ontvangst van polyaftertouch wordt channelaftertouch hier naar toe veranderd.
-                        // Maar kan niet terug veranderd worden naar channlpressure. Dus polypressure heeft prio.
-                            learn.program(row, MessageType::ChannelPressure, channel, row);
-
-                        // Voor note herkenning bij polypressure.
-                        // Zorgt ervoor dat polypressure alleen tijdens de huidige leerfase ingeleerd kan worden. (Want rowNote wordt weer gereset.
-                            rowNote[row] = note;
-//                            keysActive[learnToPressureMap[row]].noteOn(note); // Niet hier gebruiken want learnToPressureMap is nog niet gemapped.
-                        break;
-
-                        case 3:
-                            learn.program(row, MessageType::PitchBend, channel, row);
-                        break;
-                        
-                        default:
-                        break;
-                    }
-                break;
-                
-                case ChannelType::Percussion:
-                    keyAddresses[MIDI.getChannel()] = row + 1;
-                    keysBases[row + 1].row_g_p[last_voice] = row;
-                break;
-
-                default:
-                break;
-            }
-
-            ++globalAddrCnt;
-        }
-	}
-
-
-    // writeGlobalAddresses();
-    // writeKeyAftertouchMapping();
-    // writePolyAddresses();
-    // checkPolyphony();
-}
-
-
-void learn_atc(uint8_t channel, uint8_t aftertouch)
-{
-//    --channel;
-//
-//    for ( int8_t row = 0; row < 4; ++row )
-//    {
-//        if (
-//            learn.getChannel(row) == channel
-//            and
-//            learn.getType(row) == MessageType::ChannelPressure
-//            and
-//            (~PINF & rowTo_32u4PINF_bit[row]) > 0
-//        ) {
-////            address.set((int8_t)MessageType::ChannelPressure, channel, row);
-//        }
-//    }
-}
-
-void learn_atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
-{
-    --channel;
-
-    for ( int8_t row = 0; row < 4; ++row )
+    if ( c >= 9 && c <= 12 ) // Percussion
     {
-        if (
-            learn.getChannel(row) == channel
-            and
-            learn.getType(row) == MessageType::ChannelPressure
-            and
-            (~PINF & rowTo_32u4PINF_bit[row]) > 0
-            and rowNote[row] == note
-//            and keysActive[learnToPressureMap[row]].getPosition(note) > -1 // Niet gebruiken hier want learnToPressureMap is nog niet gemapped.
-        ) {
-            learn.program(row, MessageType::KeysPolyPressure, channel, row);
+        keyAddresses[c] = a;
+        keysBases[a].row = r;
+        
+        keysBases[a].noteRouter = keysGlobal[r].noteRouters;
+        keysBases[a].noteRouter[n] = 
+    }
+    else
+    {
+        switch ( parse_cntr )
+        {
+            case 0:
+                //Clear more stuff maybe?
+
+                voice = r;
+
+                // Set.
+                keyAddresses[MIDI.getChannel()] = r + 1;
+                keysBases[r + 1].row_g_p[parse_cntr] = r;
+                keysBases[r + 1].voice_next = 0;
+                //.....etc
+            break;
+            
+            case 1:
+
+                keysBases[r + 1].row_v[voice] = r;
+                keysBases[r + 1].row_v[voice] = r;
+            break;
+            
+            case 2:
+            // Bij ontvangst van polyaftertouch wordt channelaftertouch hier naar toe veranderd.
+            // Maar kan niet terug veranderd worden naar channlpressure. Dus polypressure heeft prio.
+                learn.program(r, MessageType::ChannelPressure, channel, r);
+
+            // Voor note herkenning bij polypressure.
+            // Zorgt ervoor dat polypressure alleen tijdens de huidige leerfase ingeleerd kan worden. (Want rowNote wordt weer gereset.
+                rowNote[r] = note;
+//                            keysActive[learnToPressureMap[r]].noteOn(note); // Niet hier gebruiken want learnToPressureMap is nog niet gemapped.
+            break;
+
+            case 3:
+                learn.program(r, MessageType::PitchBend, channel, r);
+            break;
+            
+            default:
+            break;
         }
     }
 }
 
-void learn_control_change(uint8_t channel, uint8_t number, uint8_t control)
+void learn_parse_atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
+{
+    --channel;
+
+    for ( int8_t r = 0; r < 4; ++r )
+    {
+        if (
+            learn.getChannel(r) == channel
+            and
+            learn.getType(r) == MessageType::ChannelPressure
+            and
+            (~PINF & rowTo_32u4PINF_bit[r]) > 0
+            and rowNote[r] == note
+//            and keysActive[learnToPressureMap[r]].getPosition(note) > -1 // Niet gebruiken hier want learnToPressureMap is nog niet gemapped.
+        ) {
+            learn.program(r, MessageType::KeysPolyPressure, channel, r);
+        }
+    }
+}
+
+void learn_parse_atc(uint8_t channel, uint8_t aftertouch)
+{
+//    --channel;
+//
+//    for ( int8_t r = 0; r < 4; ++r )
+//    {
+//        if (
+//            learn.getChannel(r) == channel
+//            and
+//            learn.getType(r) == MessageType::ChannelPressure
+//            and
+//            (~PINF & rowTo_32u4PINF_bit[r]) > 0
+//        ) {
+////            address.set((int8_t)MessageType::ChannelPressure, channel, r);
+//        }
+//    }
+}
+
+void learn_parse_control_change(uint8_t channel, uint8_t number, uint8_t control)
 {
     --channel;
     
     static bool msb_ready = false;
     static bool nrpn_ready = false;
 
-    if ( globalAddrCnt == 0 )
+    if ( parse_cntr == 0 )
     {
-    for ( int8_t row = 0; row < 4; ++row )
+    for ( int8_t r = 0; r < 4; ++r )
     {
-        precision[row] = false;
+        precision[r] = false;
         
-        if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
+        if (  (~PINF & rowTo_32u4PINF_bit[r]) > 0 )
         {
             switch ( number )
             {
             case 38:
                 if ( nrpn_ready && msb_ready )
                 {
-                    precision[row] = true;
+                    precision[r] = true;
 
                     nrpn_ready = false;
                     msb_ready = false;
@@ -180,7 +133,7 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t control)
             case 6:
                 if ( nrpn_ready )
                 {
-                    learn.program(row, MessageType::ControlChange, channel, row);
+                    learn.program(r, MessageType::ControlChange, channel, r);
 
                     msb_ready = true;
                 }
@@ -192,7 +145,7 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t control)
                 }
                 else if ( msb_ready )
                 {
-                    nrpn_lsb_controls[row] = control;
+                    nrpn_lsb_controls[r] = control;
 
                     nrpn_ready = true;
                 }
@@ -204,24 +157,24 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t control)
                 }
                 else
                 {
-                    nrpn_msb_controls[row] = control;
+                    nrpn_msb_controls[r] = control;
                 }
                 break;
             default:
-                learn.program(row, MessageType::ControlChange, channel, row);
+                learn.program(r, MessageType::ControlChange, channel, r);
 
-                if ( msb_numbers[row] + 32 == number && msb_ready )
+                if ( msb_numbers[r] + 32 == number && msb_ready )
                 {
-                    precision[row] = true;
+                    precision[r] = true;
                 }
                 
-                if ( msb_ready || (msb_numbers[row] == number && learn.getChannel(row) == channel) )
+                if ( msb_ready || (msb_numbers[r] == number && learn.getChannel(r) == channel) )
                 {
                     msb_ready = false;
                 }
                 else
                 {
-                    msb_numbers[row] = number;
+                    msb_numbers[r] = number;
 
                     msb_ready = true;
                 }
@@ -233,17 +186,17 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t control)
     }
 }
 
-void learn_pitchbend(uint8_t channel, int pitch)
+void learn_parse_pitchbend(uint8_t channel, int pitch)
 {
     --channel;
 
-    if ( globalAddrCnt == 0 )
+    if ( parse_cntr == 0 )
     {
-    for ( int8_t row = 0; row < 4; ++row )
+    for ( int8_t r = 0; r < 4; ++r )
     {
-        if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
+        if (  (~PINF & rowTo_32u4PINF_bit[r]) > 0 )
         {
-            learn.program(row, MessageType::PitchBend, channel, row);
+            learn.program(r, MessageType::PitchBend, channel, r);
         }
     }
     }
@@ -347,13 +300,13 @@ void checkPolyphony()
         // Reset counter
         polyphony.counter[a] = 0;
 
-        // Reset count and row info.
+        // Reset count and r info.
         for ( int8_t count = 0; count < 4; ++count )
         {
             polyphony.rowAtCount[a][count] = -1;
 
-            int8_t row = count;
-            polyphony.countAtRow[row] = 0;
+            int8_t r = count;
+            polyphony.countAtRow[r] = 0;
         }
     }
 
@@ -409,21 +362,21 @@ void checkPolyphony()
         {
             if ( channels.getChannelType(learn.getChannel(a)) == ChannelType::KeysSplit )
             {
-                int8_t row = learn.getRow(a);
+                int8_t r = learn.getRow(a);
                 int8_t width = polyphony.width[polyAddr];
                 
                 if ( width > 1 )
                 {
-                    // [width][row]
+                    // [width][r]
                     const int8_t boundariesHigh[3][4] = {
                         {63, 127, 127, 127},
                         {42, 85, 127, 127},
                         {31, 63, 95, 127}
                     };
                     
-                    polyphony.boundary[row] = boundariesHigh[width - 2][row];
+                    polyphony.boundary[r] = boundariesHigh[width - 2][r];
                 }
-                else polyphony.boundary[row] = 127;
+                else polyphony.boundary[r] = 127;
             }
         }
     }
@@ -434,3 +387,107 @@ void checkPolyphony()
         polyphony.counter[a] = 0;
     }
 }
+
+void clearRowData()
+{
+    for ( int8_t r = 0; r < rowAmount; ++r )
+    {
+        rowNote[r] = -1;
+    }
+}
+
+void clearKeysActive()
+{
+    for ( int8_t addr = 0; addr < keysActiveSize; ++addr )
+    {
+        keysActive[addr].reset();
+    }
+}
+
+void learn_parse_type(uint8_t t, c, d1, d2)
+{
+    // address.fill(); // Reset all global addresses.
+    // clearRowData(); // Reset global rowNote data.
+    // clearKeysActive();
+
+    // Program the note type, velocity or aftertouch for each r.
+    uint8_t button_cntr = 0;
+	for ( uint8_t r = 0; r < 4; ++r )
+	{
+        if ( (~PINF & rowTo_32u4PINF_bit[r]) > 0 )
+        {
+            // Be sure that something is going to be written in this r before the code comes here!
+            // Clear.
+            for_each(atpAddresses, if r + 1 then 0);
+            for_each(atcAddresses, if r + 1 then 0);
+            for_each(ccAddresses, if r + 1 then 0);
+            for_each(pbAddresses, if r + 1 then 0);
+            for_each(keyAddresses, if r + 1 then 0);
+
+            switch ( t ) {
+                case Midi::NoteOn:
+                    learn_parse_keys(c, d1, d2, r, button_cntr)
+                break;
+
+                case Midi::AfterTouchPoly:
+                    learn_parse_atp(c, d1, d2, r)
+                break;
+
+                case Midi::AfterTouchChannel: // Only programmed if poly not yet programmed.
+                    learn_parse_atc(c, d1, r)
+                break;
+
+                case PitchBend:
+                    learn_parse_pb(c, d1, d2, r)
+                break;
+
+                case ControlChange:
+                    learn_parse_cc(c, d1, d2, r)
+                break;
+            }
+
+            ++button_cntr;
+        }
+	}
+
+
+    // writeGlobalAddresses();
+    // writeKeyAftertouchMapping();
+    // writePolyAddresses();
+    // checkPolyphony();
+}
+
+uint8_t learn_parse_midi()
+{
+    uint8_t b_now = get_bitfield_buttons();
+    if ( MIDI.read() ) {
+        auto type = MIDI.getType();
+        switch ( type ) {
+            case NoteOn:
+            case NoteOff:
+            case AfterTouchPoly:
+            case AfterTouchChannel:
+            case PitchBend:
+            case ControlChange:
+            {
+                learn_parse_type(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
+            }
+            break;
+        }
+    }
+
+    static uint8_t b_saved = 0;
+    bool b_changed = b_now != b_saved; b_saved = b_now;
+    if ( b_changed && b_now == 0 ) {
+        // Save to EEPROM.
+        delay(200); // against too much writes.
+        // cvBases.
+        // keysBases.
+        // keysGlobal.
+        // all addresses.
+    }
+
+    return b_now;
+}
+
+#endif

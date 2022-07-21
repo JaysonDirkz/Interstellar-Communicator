@@ -1,4 +1,11 @@
 /*
+TODO:
+
+
+
+
+
+
 Versie:
 Poly en mono gescheiden.
 Eerst channel diffrentieren in cycling, trigger, split.

@@ -1,3 +1,6 @@
+#ifndef keys_writes_h
+#define keys_writes_h
+
 int8_t keysAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
 
 KeysBaseGlobal keysGlobal[4];
@@ -153,3 +156,4 @@ void write_gate_pitch_velocity_atp(KeysBase *b)
     write_gate_pitch_velocity(b);
     write_atp(b);
 }
+#endif

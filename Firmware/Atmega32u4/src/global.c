@@ -1,5 +1,12 @@
+#ifndef global_h
+#define global_h
+
 int8_t cv_pins[4];
 int8_t gate_pins[4];
+
+int8_t clockCounter = -1;
+int8_t resetCounter = -1;
+int8_t trigCounter[4] = {-1, -1, -1, -1};
 
 //Functions.
 typedef void WriteFunction_t(KeysBase *); // For declaring function pointers.
@@ -27,3 +34,4 @@ typedef void WriteFunction_t(KeysBase *); // For declaring function pointers.
 // const int8_t buttonsAmount = rowAmount;
 // const int8_t gateOutsAmount = rowAmount;
 // const int8_t cvOutsAmount = rowAmount;
+#endif

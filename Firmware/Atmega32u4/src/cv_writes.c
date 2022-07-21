@@ -1,3 +1,6 @@
+#ifndef cv_writes_h
+#define cv_writes_h
+
 int8_t atpAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
 int8_t atcAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
 int8_t ccAddresses[17]; // Has to be inited with 0. Can contain addresses 1 t/m 4.
@@ -139,3 +142,4 @@ void write_cc_base(CvBase *b)
         if ( cv_pins[b->row] > 255 ) cv_pins[b->row] = 255;
         else if ( cv_pins[b->row] < 0 ) cv_pins[b->row] = 0;
     }
+#endif
