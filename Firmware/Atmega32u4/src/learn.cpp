@@ -1,14 +1,9 @@
 #ifndef learn_parse_h
 #define learn_parse_h
 
-void learn_parse_keys(u8 c, u8 n, u8 v, u8 r, u8 parse_cntr)
+void learn_percussion(u8 c, u8 n, u8 v, u8 r, u8 r_base)
 {
-    i8 r_base;
-    if ( parse_cntr == 0 ) r_base = r;
-
-    if ( c >= 9 && c <= 12 ) // Percussion
-    {
-        if ( keyAddresses[c] == -1 ) {
+    if ( keyAddresses[c] == -1 ) {
             keyAddresses[c] = r; // Link base address to midi channel.
         }
         i8 kA = keyAddresses[c];
@@ -22,40 +17,16 @@ void learn_parse_keys(u8 c, u8 n, u8 v, u8 r, u8 parse_cntr)
 
         note_adresses[kA][n] = r;
         notes_bases[r].row = r;
+        notes_writes[r] = on_trigger_velocity;
+}
 
-        // Count amount of notes programmed on this address
-        u8 n_cnt = 0;
-        for ( i8 i = 0; i < 128; ++i ) {
-            if ( note_addresses[kA][i] > -1 ) n_cnt += 1;
-        }
+void learn_parse_keys(u8 c, u8 n, u8 v, u8 r, u8 parse_cntr)
+{
+    i8 r_base;
+    if ( parse_cntr == 0 ) r_base = r;
 
-        // Attach function:
-        if ( c == 9 || n_cnt == 1 ) { // Attach normal function.
-            notes_writes[r] = on_trigger_velocity;
-        }
-        else if ( c == 10 ) { // Attach choke function to 2 rows.
-            note_bases[r].chokegroup_other_cv_pins = &note_shared.chokegroup_other_cv_pins[0];
-
-            u8 n_cnt = 0;
-            for ( i8 i = 0; i < 128; ++i ) {
-                i8 r_any = note_addresses[kA][i];
-                if ( r_any > -1 ) {
-                    notes_writes[r_any] = on_trigger_velocity_choke; // Attach base function.
-                    note_bases[r_any].chokegroup_other_pins_amount = 1;
-                    if ( r_any != r ) note_bases[r].chokegroup_other_cv_pins[0] = r;
-                    if ( ++n_cnt == 2 ) break;
-                }
-            }
-        }
-        else { // Attach choke function to 2 or more rows.
-            for ( i8 i = 0; i < 128; ++i ) {
-                i8 r = note_addresses[kA][i];
-                if ( r > -1 ) {
-                    notes_writes[r] = on_trigger_velocity_choke; // Attach base function.
-                    //.....
-                }
-            }
-        }
+    if ( c >= 9 && c <= 12 ) { // Percussion
+        learn_percussion(c, n, v, r, r_base);
     }
     else
     {

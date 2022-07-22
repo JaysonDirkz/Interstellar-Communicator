@@ -74,33 +74,23 @@ void on_trigger(Note_Bases *b)
 {
     trigCounter[b->row] = PULSE_LENGTH_MS;
     gate_pins[b->row] = true;
+    choke(b);
 }
 
 void on_trigger_velocity(Note_Bases *b)
 {
     on_trigger(b);
     cv_pins[b->row] = MIDI.getData2;
+    choke(b);
 }
 
-    // Only called by on_trigger_choke and on_trigger_velocity_choke.
+    // Only called by on_trigger and on_trigger_velocity.
     void choke(Note_Bases *b)
     {
         for ( i8 i = 0; i < b->chokegroup_other_pins_amount; ++i ) {
             cv_pins[b->chokegroup_other_cv_pins[i]] = 0;
         }
     }
-
-void on_trigger_choke(Note_Bases *b)
-{
-    on_trigger(b);
-    choke(b);
-}
-
-void on_trigger_velocity_choke(Note_Bases *b)
-{
-    on_trigger_velocity(b);
-    choke(b);
-}
 
 
 // For keys.
