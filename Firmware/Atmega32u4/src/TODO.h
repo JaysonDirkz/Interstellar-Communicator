@@ -14,4 +14,8 @@ TESTEN:
 - ControlChange.
 - Percussie.
 - Keys split.
+
+LOG:
+27-7-2022:
+- percussie kanaal veranderd naar enkel 10.
 */

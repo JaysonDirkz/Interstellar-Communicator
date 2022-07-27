@@ -6,8 +6,9 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 #include "debug.h"
 #include "ActiveSensing.h"
 
-#include <DirkXoniC.h>
-using namespace DirkXoniC;
+#include "Utility.h"
+#include "MidiLearn.h"
+#include "MidiUtility.h"
 
 #include <EEPROM.h>
 
@@ -71,11 +72,11 @@ lastNote_t lastNote[lastNoteSize];
 int8_t rowNote[4] = {-1, -1, -1, -1};
 
 //Saved in eeprom
-int8_t msb_numbers[4];
-// int8_t lsb_numbers[4];
-int8_t nrpn_msb_controls[4];
-int8_t nrpn_lsb_controls[4];
-bool precision[4];
+struct Cc {
+    uint16_t nrpn;
+    bool precision;
+    uint8_t msb;
+} cc[4];
 
 // Voor PolyPressure welke fingers actief zijn en hoeveel.
 int8_t learnToPressureMap[4] = {-1, -1, -1, -1}; //Saved in eeprom
@@ -150,22 +151,22 @@ void confpwm()
 	PWM6_13_MAX=255;  
 		
 	// Prepare pin 9 to use PWM
-	PWM9=0;   // Set PWM value between 0 and 255
+	PWM9=0;   // Set PWM value between 0 and 255 (0 - 10,58 V)
 	DDRB|=1<<5;    // Set Output Mode B5
 	TCCR1A|=0x80;  // Activate channel
 	
 	// Prepare pin 10 to use PWM
-	PWM10=0;   // Set PWM value between 0 and 255
+	PWM10=0;   // Set PWM value between 0 and 255 (0 - 10,58 V)
 	DDRB|=1<<6;    // Set Output Mode B6
 	TCCR1A|=0x20;  // Set PWM value
 	
 	// Prepare pin 6 to use PWM
-	PWM6=0;   // Set PWM value between 0 and 255
+	PWM6=0;   // Set PWM value between 0 and 255 (0 - 10,58 V)
 	DDRD|=1<<7;    // Set Output Mode D7
 	TCCR4C|=0x09;  // Activate channel D
 	
 	// Prepare pin 5 to use PWM
-	PWM13=0;   // Set PWM value between 0 and 255
+	PWM13=0;   // Set PWM value between 0 and 255 (0 - 10,58 V)
 	DDRC|=1<<7;    // Set Output Mode C6
 	TCCR4A=0x82;  // Activate channel A
 }
@@ -196,10 +197,7 @@ void load_learn_status()
     for ( int8_t i = 0; i < 4; ++i ) {
         EEPROM.get(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
         EEPROM.get(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
-        EEPROM.get(a, msb_numbers[i]); a += sizeof(msb_numbers[i]);
-        EEPROM.get(a, nrpn_msb_controls[i]); a += sizeof(msb_numbers[i]);
-        EEPROM.get(a, nrpn_lsb_controls[i]); a += sizeof(msb_numbers[i]);
-        EEPROM.get(a, precision[i]); a += sizeof(msb_numbers[i]);
+        EEPROM.get(a, cc[i]); a += sizeof(cc[i]);
     }
 
     DEBUG_LOAD_EEPROM
@@ -215,10 +213,7 @@ void save_learn_status()
     for ( int8_t i = 0; i < 4; ++i ) {
         EEPROM.put(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
         EEPROM.put(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
-        EEPROM.put(a, msb_numbers[i]); a += sizeof(msb_numbers[i]);
-        EEPROM.put(a, nrpn_msb_controls[i]); a += sizeof(msb_numbers[i]);
-        EEPROM.put(a, nrpn_lsb_controls[i]); a += sizeof(msb_numbers[i]);
-        EEPROM.put(a, precision[i]); a += sizeof(msb_numbers[i]);
+        EEPROM.put(a, cc[i]); a += sizeof(cc[i]);
     }
 
     DEBUG_SAVE_EEPROM
@@ -612,64 +607,6 @@ void learn_atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
     }
 }
 
-void learn_control_change(uint8_t channel, uint8_t number, uint8_t control)
-{
-    --channel;
-    
-    static bool msb_ready = false;
-    static bool nrpn_ready = false;
-
-    if ( globalAddrCnt == 0 )
-    {
-    for ( int8_t row = 0; row < 4; ++row )
-    {
-        precision[row] = false;
-        
-        if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
-        {
-            switch ( number )
-            {
-                case 38:
-                    if ( nrpn_ready && msb_ready ) {
-                        precision[row] = true;
-                        nrpn_ready = false;
-                        msb_ready = false;
-                    }
-                    break;
-                case 6:
-                    if ( nrpn_ready ) {
-                        learn.program(row, MessageType::ControlChange, channel, row);
-                        msb_ready = true;
-                    }
-                    break;
-                case 98:
-                    if ( control == 127 ) break;
-                    else if ( msb_ready ) {
-                        nrpn_lsb_controls[row] = control;
-                        nrpn_ready = true;
-                    }
-                    break;
-                case 99:
-                    if ( control == 127 ) break;
-                    else nrpn_msb_controls[row] = control;
-                    break;
-                default:
-                    learn.program(row, MessageType::ControlChange, channel, row);
-    
-                    if ( msb_numbers[row] + 32 == number && msb_ready ) precision[row] = true;
-                    
-                    if ( msb_ready || (msb_numbers[row] == number && learn.getChannel(row) == channel) ) msb_ready = false;
-                    else {
-                        msb_numbers[row] = number;
-                        msb_ready = true;
-                    }
-                    break;
-            }
-        }
-    }
-    }
-}
-
 void learn_pitchbend(uint8_t channel, int pitch)
 {
     --channel;
@@ -697,7 +634,7 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
         {
             int8_t globalAddr = address.get((int8_t)type, channel);
             int8_t row = learn.getRow(globalAddr);
-            cv_out(row, velocity, 0);
+            cv_out(row, velocity << 1);
         }
     
         for ( int8_t row = 0; row < 4; ++row )
@@ -752,13 +689,13 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
                         velocitySave = lastNote[row].getVelocity();
 
                         int8_t positionsOfKey = lastNote[row].getPitch();
-                        cv_out(row, keysActive[row].getKey(positionsOfKey), 0);
+                        cv_out(row, keysActive[row].getKey(positionsOfKey) << 1);
                         gate_out(row, true);
                     }
                     break;
                 
                     case MessageType::KeysVelocity:
-                        cv_out(row, velocitySave, 0);
+                        cv_out(row, velocitySave << 1);
                     break;
                 
                     case MessageType::KeysPolyPressure:
@@ -839,7 +776,7 @@ void note_off_lastStage(int8_t globalAddr, MessageType type, int8_t note, int8_t
                     *keyRowPntr = row;
 
                     int8_t keyOut = keysActive[row].getKey(lastNote[row].getPitch());
-                    if ( keyOut > -1 ) cv_out(row, keyOut, 0);
+                    if ( keyOut > -1 ) cv_out(row, keyOut << 1);
                     gate_out(row, lastNote[row].getState());
                 }
             }
@@ -847,7 +784,7 @@ void note_off_lastStage(int8_t globalAddr, MessageType type, int8_t note, int8_t
         break;
 
         case MessageType::KeysVelocity:
-            cv_out(row, lastNote[*keyRowPntr].getVelocity(), 0);
+            cv_out(row, lastNote[*keyRowPntr].getVelocity() << 1);
         break;
 
         case MessageType::KeysPolyPressure:
@@ -862,7 +799,7 @@ void note_off_lastStage(int8_t globalAddr, MessageType type, int8_t note, int8_t
                 rowNote[row] = lastKey; // Nog nodig, want je hebt al key keysActive?
 
                 int8_t atpAddr = learnToPressureMap[row];
-                if ( atpAddr > -1 ) cv_out(row, pressures[atpAddr].get(keysActive[*keyRowPntr].getPosition(lastKey)), 0);
+                if ( atpAddr > -1 ) cv_out(row, pressures[atpAddr].get(keysActive[*keyRowPntr].getPosition(lastKey)) << 1);
             }
             else rowNote[row] = -1; // Nog nodig, want je hebt al key keysActive?
         }
@@ -894,7 +831,7 @@ void atc(uint8_t channel, uint8_t aftertouch)
     if ( address.getState((int8_t)type, channel) )
     {
         int8_t globalAddr = address.get((int8_t)type, channel);
-        cv_out(learn.getRow(globalAddr), aftertouch, 0);
+        cv_out(learn.getRow(globalAddr), aftertouch << 1);
     }
 }
 
@@ -919,7 +856,7 @@ void atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
                 int8_t keyPos = keysActive[row].getPosition(note);
                 if ( atpAddr > -1 and keyPos > -1 ) pressures[atpAddr].set(keyPos, aftertouch);
                 
-                if (  note == rowNote[row] ) cv_out(row, aftertouch, 0);
+                if (  note == rowNote[row] ) cv_out(row, aftertouch << 1);
             }
         }
         else
@@ -929,65 +866,123 @@ void atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
             int8_t atpAddr = learnToPressureMap[row];
             int8_t keyPos = keysActive[row].getPosition(note);
             if ( atpAddr > -1 and keyPos > -1 ) pressures[atpAddr].set(keyPos, aftertouch);
-            if (  note == rowNote[row] ) cv_out(row, aftertouch, 0);
+            if (  note == rowNote[row] ) cv_out(row, aftertouch << 1);
         }
     }
 }
 
-//test deze
+void learn_control_change(uint8_t channel, uint8_t number, uint8_t val)
+{
+    --channel;
 
-void control_change(uint8_t channel, uint8_t number, uint8_t control)
+    static bool wait_for_98 = false;
+    static bool wait_for_6 = false;
+    static bool wait_for_lsb = false;
+    static uint16_t nrpn;
+
+    if ( globalAddrCnt == 0 ) {
+        for ( int8_t row = 0; row < 4; ++row ) {
+            if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 ) {
+                switch ( number ) {
+                    case 38:
+                        goto LSB;
+                    case 6:
+                        if ( wait_for_6 ) {
+                            wait_for_6 = false;
+                            cc[4].nrpn = nrpn;
+                            goto MSB;
+                        }
+                        break;
+                    case 98:
+                        if ( val == 127 ) return;
+                        else if ( wait_for_98 ) {
+                            wait_for_98 = false;
+                            wait_for_6 = true;
+                            nrpn |= val;
+                            return;
+                        }
+                        break;
+                    case 99:
+                        if ( val == 127 ) return;
+                        else {
+                            wait_for_98 = true;
+                            nrpn = val << 7;
+                            return;
+                        }
+                        break;
+                    default:
+                        if ( number > 31 && number < 64 ) {
+                            LSB:
+                            if ( wait_for_lsb && cc[row].msb == (number - 32) ) {
+                                wait_for_lsb = false;
+                                cc[row].precision = true;
+                                return;
+                            }
+                        } else {
+                            MSB:
+                            wait_for_lsb = number < 32;
+                            cc[row].msb = number;
+                            cc[row].precision = false;
+                            learn.program(row, MessageType::ControlChange, channel, row);
+                            return;
+                        }
+                        break;
+                }
+            }
+        }
+    }
+}
+
+void control_change(uint8_t channel, uint8_t number, uint8_t val)
 {
     --channel;
     
-    static int8_t nrpn_iter[4] = {0, 0, 0, 0};
-    static int8_t msb_controller[4] = {-1, -1, -1, -1};
-    
-	bool msb_6 = 6 == number;
-	bool lsb_38 = 38 == number;
-	
-	bool nrpn_99 = 99 == number;
-	bool nrpn_98 = 98 == number;
-    
-	const int NRPN_99_CTRL = B00 << 7 | B0100001;
-	const int NRPN_98_CTRL = B01 << 7 | B1000001;
-	const int MSB_6 = B10 << 7 | B0001001;
-	const int LSB_38 = B10 << 7 | B0010001;
-	const int MSB = B0000011;
-	const int LSB = B0000101;
-    
-	for ( int8_t row = 0; row < 4; ++row )
-	{
-		bool cv_main = channel == learn.getChannel(row) && MessageType::ControlChange == learn.getType(row);
-        
-		bool msb_num = msb_numbers[row] == number;
-		bool lsb_num = msb_numbers[row] + 32 == number;
-        
-		bool nrpn_msb_ctrl = nrpn_msb_controls[row] == control;
-		bool nrpn_lsb_ctrl = nrpn_lsb_controls[row] == control;
-        
-		switch ( nrpn_iter[row] << 7 | (nrpn_lsb_ctrl & nrpn_98) << 6 | (nrpn_msb_ctrl & nrpn_99) << 5 | lsb_38 << 4 | msb_6 << 3 | lsb_num << 2 | msb_num << 1 | cv_main )
-		{
-			case NRPN_99_CTRL:
-				return nrpn_iter[row] = 1;
-			case NRPN_98_CTRL:
-				return nrpn_iter[row] = 2;
-			case MSB_6:
-				if ( precision[row] ) return msb_controller[row] = control;
-				nrpn_iter[row] = 0;
-				return cv_out(row, control, 0);
-			case LSB_38:
-				nrpn_iter[row] = 0;
-				return cv_out(row, msb_controller[row] << 7 | control, 6);
-			case MSB:
-				if ( precision[row] ) return msb_controller[row] = control;
-				return cv_out(row, control, 0);
-			case LSB:
-				return cv_out(row, msb_controller[row] << 7 | control, 6);
-			default:
-			    break;
-		}
-	}
+    static uint8_t msb[4] = {0, 0, 0, 0};
+    static uint16_t nrpn[16] = {
+        16383, 16383, 16383, 16383,
+        16383, 16383, 16383, 16383,
+        16383, 16383, 16383, 16383,
+        16383, 16383, 16383, 16383
+    };
+
+    switch ( number ) {
+    case 98: nrpn[channel] |= val; break;
+    case 99: nrpn[channel] = (val << 7) | (nrpn[channel] & 127); break;
+    default:
+        for ( int8_t row = 0; row < 4; ++row )
+        {
+            if ( channel == learn.getChannel(row) && MessageType::ControlChange == learn.getType(row) ) {
+                switch ( number ) {
+                case 38:
+                    if ( cc[row].nrpn == nrpn[channel] ) goto LSB;
+                    return;
+                case 6:
+                    if ( cc[row].nrpn == nrpn[channel] ) goto MSB;
+                    break;
+                default:
+                    if ( number > 31 && number < 64 ) {
+                        LSB:
+                        if ( cc[row].precision && cc[row].msb == (number - 32)) {
+                            cv_out(row, ((msb[row] << 7) | val) >> 6);
+                            return;
+                        }
+                    } else {
+                        MSB:
+                        if ( cc[row].msb == number ) {
+                            if ( cc[row].precision ) { // kan alleen true zijn als het cc[row].msb onder de 32 is.
+                                msb[row] = val;
+                            } else {
+                                cv_out(row, val << 1);
+                            }
+                            return;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        break;
+    }
 }
 
 void pitchbend(uint8_t channel, int pitch)
@@ -999,14 +994,13 @@ void pitchbend(uint8_t channel, int pitch)
     if ( address.getState((int8_t)type, channel) )
     {
         int8_t globalAddr = address.get((int8_t)type, channel);
-        cv_out(learn.getRow(globalAddr), pitch + 8192, 6);
+        cv_out(learn.getRow(globalAddr), (pitch + 8192) >> 6);
     }
 }
 
 
-void cv_out(int8_t row, int number, int8_t rightShift)
+void cv_out(int8_t row, uint8_t value)
 {
-	uint8_t value = number >> rightShift;
 	switch (row)
 	{
 		case 0: PWM6 = value; break;
