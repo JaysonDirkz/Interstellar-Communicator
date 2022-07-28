@@ -57,15 +57,15 @@ class Channels {
     }
 };
 
-template <int8_t addressAmount, int8_t rowAmount, int8_t percChannelAmount = 4>
+template <int8_t addressAmount, int8_t rowAmount>
 class Programmer {
     private:
     // Wordt enkel uitgelezen in learn polyphony fase. Met een loop.
     int8_t rows[addressAmount];
     int8_t channels[addressAmount];
     MessageType types[addressAmount];
-    
-    int8_t percNotes[rowAmount][percChannelAmount];
+
+    int8_t percNotes[rowAmount];
 
     void setType(int8_t a, MessageType t)
     {
@@ -89,10 +89,7 @@ class Programmer {
 
         for( int8_t r = 0; r < rowAmount; ++r )
         {
-            for( int8_t c = 0; c < percChannelAmount; ++c )
-            {
-                percNotes[r][c] = -1;
-            }
+            percNotes[r] = -1;
         }
     }
 
@@ -106,7 +103,7 @@ class Programmer {
         if ( t == MessageType::Keys )
         {
             // Clear row of percNotes.
-            setPercNote(getRow(addr), 8, -1);
+            setPercNote(getRow(addr), -1);
         }
     }
 
@@ -125,9 +122,9 @@ class Programmer {
         return rows[a];
     }
     
-    int8_t getPercNote(int8_t r, int8_t c)
+    int8_t getPercNote(int8_t r)
     {
-        return percNotes[r][c - 8];
+        return percNotes[r];
     }
 
     void setRow(int8_t a, int8_t row)
@@ -135,16 +132,9 @@ class Programmer {
         rows[a] = row;
     }
 
-    void setPercNote(int8_t r, int8_t c, int8_t note)
+    void setPercNote(int8_t r, int8_t note)
     {
-        // Clear current address.
-        for ( int8_t j = 0; j < percChannelAmount; ++j )
-        {
-            percNotes[r][j] = -1;
-        }
-
-        // Write
-        percNotes[r][c - 8] = note;
+        percNotes[r] = note;
     }
 };
 

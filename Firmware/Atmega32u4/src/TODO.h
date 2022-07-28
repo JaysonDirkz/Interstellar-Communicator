@@ -8,6 +8,7 @@ BUGS:
  
 
 TESTEN:
+- Check of percussie niet overlapt met keys als je beide programmeerd in dezelfde row.
 - ActiveKeys2 testen en test ook de wraparound als je 10 toetsten hebt ingedrukt.
 - Channelaftertouch inleren als er geen polyaftertouch is.
 - Prioriteit van polyaftertouch over channelaftertouch.

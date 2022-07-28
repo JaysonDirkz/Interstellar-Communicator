@@ -727,8 +727,18 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
     
         for ( int8_t row = 0; row < 4; ++row )
         {
-            if ( note == learn.getPercNote(row, channel) )
+            if ( note == learn.getPercNote(row) )
             {
+                int8_t *chokeNotes = percGetChokeNotes(note);
+
+                if ( chokeNotes[0] > 0 ) {
+                    for ( int8_t r = 0; r < 4 ++r ) {
+                        if ( learn.perCvState[r] && (chokeNotes[1] == learn.getPercNote(r) || chokeNotes[2] == learn.getPercNote(r)) ) {
+                            cvOut.set(row, 0);
+                        }
+                    }
+                }
+                
                 trigCounter[row] = PULSE_LENGTH_MS;
                 gate_out(row, true);
                 return;
@@ -739,6 +749,28 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
         default:
         break;
     }
+}
+
+// base on GM percussion map in General Midi system level 1.
+int8_t * percGetChokeNotes(uint8_t note)
+{
+    // {first note, second note}
+    static int8_t out[2] = {-1, -1};
+    
+    switch ( note ) {
+        case 42: out[0] = 44; out[1] = 46; break;
+        case 44: out[0] = 42; out[1] = 46; break;
+        case 46: out[0] = 42; out[1] = 44; break;
+        case 62: out[0] = 63; out[1] = -1; break;
+        case 63: out[0] = 62; out[1] = -1; break;
+        case 78: out[0] = 79; out[1] = -1; break;
+        case 79: out[0] = 78; out[1] = -1; break;
+        case 80: out[0] = 81; out[1] = -1; break;
+        case 81: out[0] = 80; out[1] = -1; break;
+        default: out[0] = -1; out[1] = -1; break;
+    }
+
+    return out;
 }
 
 void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
