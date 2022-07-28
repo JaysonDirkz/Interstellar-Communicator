@@ -700,13 +700,17 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
 
                 if ( polyAddr > -1 )
                 {
-                    if ( channels.getChannelType(channel) == ChannelType::KeysCycling )
-                    {
+                    switch ( channels.getChannelType(channel) ) {
+                    case ChannelType::KeysCycling:
                         if ( polyphony.counter[polyAddr] >= polyphony.width[polyAddr] ) polyphony.counter[polyAddr] = 0;
-                        
                         row = polyphony.rowAtCount[polyAddr][ polyphony.counter[polyAddr]++ ];
+                        break;
+                    case ChannelType::KeysSplit:
+                        row = getRowFromSplit(note, polyAddr);
+                        break;
+                    default:
+                        break;
                     }
-                    else row = getRowFromSplit(note, polyAddr);
                 }
                 else row = learn.getRow(globalAddr);
 
@@ -913,62 +917,64 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t val)
 {
     --channel;
 
-    switch ( number ) {
-    case 99:
-        if ( val == 127 );
-        else {
-            learnCc.wait_for_98 = true;
-            learnCc.nrpn = val << 7;
-        }
-        break;
-    default:
-        for ( int8_t row = 0; row < 4; ++row ) {
-            if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 ) {
-                switch ( number ) {
-                    case 98:
-                        if ( val == 127 );
-                        else if ( learnCc.wait_for_98 ) {
-                            learnCc.wait_for_98 = false;
-                            learnCc.wait_for_6 = true;
-                            learnCc.nrpn |= val;
-                            cc[row].nrpn = learnCc.nrpn;
-                            cc[row].msb = number;
-                            cc[row].precision = false;
-                            learn.program(row, MessageType::ControlChange, channel, row);
-                        }
-                        return;
-                    case 38:
-                        goto LSB;
-                    case 6:
-                        if ( learnCc.wait_for_6 ) {
-                            learnCc.wait_for_6 = false;
-                            goto MSB;
-                        }
-                        return;
-                    default:
-                        if ( channel == 15 ) { // for rotary encoder (at least with Allen&Heath) relative style.
-                            cc[row].msb = number;
-                            learn.program(row, MessageType::ControlChange, channel, row);
-                        } else if ( number > 31 && number < 64 ) {
-                            LSB:
-                            if ( learnCc.wait_for_lsb && cc[row].msb == (number - 32) ) {
-                                learnCc.wait_for_lsb = false;
-                                cc[row].precision = true;
+    if ( number < 120 ) {
+        switch ( number ) {
+        case 99:
+            if ( val == 127 );
+            else {
+                learnCc.wait_for_98 = true;
+                learnCc.nrpn = val << 7;
+            }
+            break;
+        default:
+            for ( int8_t row = 0; row < 4; ++row ) {
+                if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 ) {
+                    switch ( number ) {
+                        case 98:
+                            if ( val == 127 );
+                            else if ( learnCc.wait_for_98 ) {
+                                learnCc.wait_for_98 = false;
+                                learnCc.wait_for_6 = true;
+                                learnCc.nrpn |= val;
+                                cc[row].nrpn = learnCc.nrpn;
+                                cc[row].msb = number;
+                                cc[row].precision = false;
+                                learn.program(row, MessageType::ControlChange, channel, row);
                             }
-                        } else {
-                            MSB:
-                            learnCc.wait_for_lsb = number < 32;
-                            cc[row].msb = number;
-                            cc[row].precision = false;
-                            learn.program(row, MessageType::ControlChange, channel, row);
-//                            sprintf(debug, "learn_cc r%d, n%d, v%d, nrpn%d, prec%d, msb%d", row, number, val, cc[row].nrpn, cc[row].precision, cc[row].msb);
-//                            MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
-                        }
-                        return;
+                            return;
+                        case 38:
+                            goto LSB;
+                        case 6:
+                            if ( learnCc.wait_for_6 ) {
+                                learnCc.wait_for_6 = false;
+                                goto MSB;
+                            }
+                            return;
+                        default:
+                            if ( channel == 15 ) { // for rotary encoder (at least with Allen&Heath) relative style.
+                                cc[row].msb = number;
+                                learn.program(row, MessageType::ControlChange, channel, row);
+                            } else if ( number > 31 && number < 64 ) {
+                                LSB:
+                                if ( learnCc.wait_for_lsb && cc[row].msb == (number - 32) ) {
+                                    learnCc.wait_for_lsb = false;
+                                    cc[row].precision = true;
+                                }
+                            } else {
+                                MSB:
+                                learnCc.wait_for_lsb = number < 32;
+                                cc[row].msb = number;
+                                cc[row].precision = false;
+                                learn.program(row, MessageType::ControlChange, channel, row);
+    //                            sprintf(debug, "learn_cc r%d, n%d, v%d, nrpn%d, prec%d, msb%d", row, number, val, cc[row].nrpn, cc[row].precision, cc[row].msb);
+    //                            MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
+                            }
+                            return;
+                    }
                 }
             }
+            break;
         }
-        break;
     }
 }
 
@@ -988,6 +994,19 @@ void control_change(uint8_t channel, uint8_t number, uint8_t val)
     static uint16_t pre_nrpn = 16383;
 
     switch ( number ) {
+    case 120: // at channel all notes off gates and velocities low.
+        setAtChannelAllGatesLow(c);
+        setAtChannelAllVelocitiesLow(c);
+        setAtChannelAllNotesOff(c);
+        break;
+    case 123:
+    case 124:
+    case 125:
+    case 126:
+    case 127: // at channel all notes off and gates low.
+        setAtChannelAllGatesLow(c);
+        setAtChannelAllNotesOff(cc);
+        break;
     case 98:
         if ( wait_for_98 ) {
             wait_for_98 = false;
@@ -1099,12 +1118,8 @@ void clock_continue()
 
 void clock_stop()
 {
-	digitalWrite(CLOCK_PIN, LOW);
-	digitalWrite(RESET_PIN, LOW);
-	gate_out(0, LOW);
-	gate_out(1, LOW);
-	gate_out(2, LOW);
-	gate_out(3, LOW);
+    setAllClockOutputsLow();
+    setAtChannelAllGatesLow(-1);
 }
 
 void active_sensing()
@@ -1114,14 +1129,43 @@ void active_sensing()
 
 void activeSensing_onTimeout()
 {
-    for ( int8_t i = 0; i < keysActiveSize; ++i ) keysActive[i].reset();
-    for ( int8_t i = 0; i < lastNoteSize; ++i ) lastNote[i].reset();
-    digitalWrite(CLOCK_PIN, LOW);
-    digitalWrite(RESET_PIN, LOW);
-    gate_out(0, LOW);
-    gate_out(1, LOW);
-    gate_out(2, LOW);
-    gate_out(3, LOW);
+    setAllClockOutputsLow();
+    setAtChannelAllGatesLow(-1);
+    setAtChannelAllNotesOff(-1);
 
     DEBUG_ACTIVE_TIMEOUT
+}
+
+void setAtChannelAllNotesOff(int8_t c) // when c == -1 all notes off.
+{
+    for ( int8_t i = 0; i < 4; ++i ) {
+        if ( c == -1 || c == learn.getChannel(i) ) {
+            keysActive[i].reset();
+            lastNote[i].reset();
+        }
+    }
+}
+
+void setAtChannelAllGatesLow(int8_t c) // when c == -1 all gates low.
+{
+    for ( int8_t i = 0; i < 4; ++i ) {
+        if ( c == -1 || c == learn.getChannel(i) ) {
+            gate_out(i, 0);
+        }
+    }
+}
+
+void setAllClockOutputsLow()
+{
+    digitalWrite(CLOCK_PIN, LOW);
+    digitalWrite(RESET_PIN, LOW);
+}
+
+void setAtChannelAllVelocitiesLow(int8_t c) // when c == -1 all velocities low.
+{
+    for ( int8_t i = 0; i < 4; ++i ) {
+        if ( (c == -1 || c == learn.getChannel(i)) && (learn.getType(i) == MessageType::KeysVelocity || learn.getType(i) == MessageType::PercussionVelocity) ) {
+            cvOut.set(i, 0);
+        }
+    }
 }
