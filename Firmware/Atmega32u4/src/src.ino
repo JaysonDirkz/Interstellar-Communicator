@@ -563,7 +563,7 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
         {
             switch ( channels.getChannelType(channel) )
             {
-                case ChannelType::KeysCycling:
+                case ChannelType::KeysMono:
                 case ChannelType::KeysSplit:
                     switch ( globalAddrCnt )
                     {
@@ -698,13 +698,8 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
                 // Schrijf row.
                 int8_t row;
 
-                if ( polyAddr > -1 )
-                {
+                if ( polyAddr > -1 ) {
                     switch ( channels.getChannelType(channel) ) {
-                    case ChannelType::KeysCycling:
-                        if ( polyphony.counter[polyAddr] >= polyphony.width[polyAddr] ) polyphony.counter[polyAddr] = 0;
-                        row = polyphony.rowAtCount[polyAddr][ polyphony.counter[polyAddr]++ ];
-                        break;
                     case ChannelType::KeysSplit:
                         row = getRowFromSplit(note, polyAddr);
                         break;
@@ -774,19 +769,7 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
                 // Schrijf row.
                 if ( polyAddr > -1 ) //polyphony
                 {
-                    if ( channels.getChannelType(channel) == ChannelType::KeysCycling )
-                    {
-                        for ( int8_t c = 0; c < polyphony.width[polyAddr]; ++c )
-                        {
-                            static int8_t keyRowHist[addressAmount] = {0, 0};
-                            // Output.
-                            note_off_lastStage(globalAddr, type, note, velocity, polyphony.rowAtCount[polyAddr][c], &keyRowHist[c]);
-
-                            polyphony.counter[polyAddr] = lastNote[keyRowHist[c]].getState() ? c + 1 : c;
-                        }
-                    }
-                    else
-                    {
+                    if ( channels.getChannelType(channel) == ChannelType::KeysSplit ) {
                         static int8_t keyRow = 0;
                         // Output.
                         note_off_lastStage(globalAddr, type, note, velocity, getRowFromSplit(note, polyAddr), &keyRow);
@@ -995,17 +978,17 @@ void control_change(uint8_t channel, uint8_t number, uint8_t val)
 
     switch ( number ) {
     case 120: // at channel all notes off gates and velocities low.
-        setAtChannelAllGatesLow(c);
-        setAtChannelAllVelocitiesLow(c);
-        setAtChannelAllNotesOff(c);
+        setAtChannelAllGatesLow(channel);
+        setAtChannelAllVelocitiesLow(channel);
+        setAtChannelAllNotesOff(channel);
         break;
     case 123:
     case 124:
     case 125:
     case 126:
     case 127: // at channel all notes off and gates low.
-        setAtChannelAllGatesLow(c);
-        setAtChannelAllNotesOff(cc);
+        setAtChannelAllGatesLow(channel);
+        setAtChannelAllNotesOff(channel);
         break;
     case 98:
         if ( wait_for_98 ) {

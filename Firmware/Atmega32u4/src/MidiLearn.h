@@ -30,7 +30,7 @@ enum class MessageType: int8_t {
 //};
 
 enum class ChannelType: int8_t {
-    KeysCycling,
+    KeysMono,
     Percussion,
     KeysSplit,
     Size
@@ -47,7 +47,7 @@ class Channels {
     {
         for ( int8_t c = 0; c < channelTypesSize; ++c )
         {
-            if ( c >= 0 and c <= 8 ) channelTypes[c] = ChannelType::KeysCycling;
+            if ( c >= 0 and c <= 8 ) channelTypes[c] = ChannelType::KeysMono;
             else if ( c == 9 ) channelTypes[c] = ChannelType::Percussion;
             else if ( c >= 10 and c <= 15 ) channelTypes[c] = ChannelType::KeysSplit;
         }
