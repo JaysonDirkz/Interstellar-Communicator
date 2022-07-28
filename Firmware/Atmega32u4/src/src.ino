@@ -523,24 +523,21 @@ void checkPolyphony()
         
         if ( polyAddr > -1 )
         {
-            if ( channels.getChannelType(learn.getChannel(a)) == ChannelType::KeysSplit )
+            int8_t row = learn.getRow(a);
+            int8_t width = polyphony.width[polyAddr];
+            
+            if ( width > 1 )
             {
-                int8_t row = learn.getRow(a);
-                int8_t width = polyphony.width[polyAddr];
+                // [width][row]
+                const int8_t boundariesHigh[3][4] = {
+                    {63, 127, 127, 127},
+                    {42, 85, 127, 127},
+                    {31, 63, 95, 127}
+                };
                 
-                if ( width > 1 )
-                {
-                    // [width][row]
-                    const int8_t boundariesHigh[3][4] = {
-                        {63, 127, 127, 127},
-                        {42, 85, 127, 127},
-                        {31, 63, 95, 127}
-                    };
-                    
-                    polyphony.boundary[row] = boundariesHigh[width - 2][row];
-                }
-                else polyphony.boundary[row] = 127;
+                polyphony.boundary[row] = boundariesHigh[width - 2][row];
             }
+            else polyphony.boundary[row] = 127;
         }
     }
     
@@ -563,44 +560,43 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
         {
             switch ( channels.getChannelType(channel) )
             {
-                case ChannelType::KeysMono:
-                case ChannelType::KeysSplit:
-                    switch ( globalAddrCnt )
-                    {
-                        case 0:
-                            learn.program(row, MessageType::Keys, channel, row);
-                        break;
-                        
-                        case 1:
-                            learn.program(row, MessageType::KeysVelocity, channel, row);
-                        break;
-                        
-                        case 2:
-                        // Bij ontvangst van polyaftertouch wordt channelaftertouch hier naar toe veranderd.
-                        // Maar kan niet terug veranderd worden naar channlpressure. Dus polypressure heeft prio.
-                            learn.program(row, MessageType::ChannelPressure, channel, row);
+            case ChannelType::Keys:
+                switch ( globalAddrCnt )
+                {
+                    case 0:
+                        learn.program(row, MessageType::Keys, channel, row);
+                    break;
+                    
+                    case 1:
+                        learn.program(row, MessageType::KeysVelocity, channel, row);
+                    break;
+                    
+                    case 2:
+                    // Bij ontvangst van polyaftertouch wordt channelaftertouch hier naar toe veranderd.
+                    // Maar kan niet terug veranderd worden naar channlpressure. Dus polypressure heeft prio.
+                        learn.program(row, MessageType::ChannelPressure, channel, row);
 
-                        // Voor note herkenning bij polypressure.
-                        // Zorgt ervoor dat polypressure alleen tijdens de huidige leerfase ingeleerd kan worden. (Want rowNote wordt weer gereset.
-                            rowNote[row] = note;
-                        break;
+                    // Voor note herkenning bij polypressure.
+                    // Zorgt ervoor dat polypressure alleen tijdens de huidige leerfase ingeleerd kan worden. (Want rowNote wordt weer gereset.
+                        rowNote[row] = note;
+                    break;
 
-                        case 3:
-                            learn.program(row, MessageType::PitchBend, channel, row);
-                        break;
-                        
-                        default:
-                        break;
-                    }
-                break;
-                
-                case ChannelType::Percussion:
-                    learn.program(row, MessageType::PercussionVelocity, channel, row);
-                    learn.setPercNote(row, channel, note);
-                break;
+                    case 3:
+                        learn.program(row, MessageType::PitchBend, channel, row);
+                    break;
+                    
+                    default:
+                    break;
+                }
+            break;
+            
+            case ChannelType::Percussion:
+                learn.program(row, MessageType::PercussionVelocity, channel, row);
+                learn.setPercNote(row, channel, note);
+            break;
 
-                default:
-                break;
+            default:
+            break;
             }
 
             ++globalAddrCnt;
@@ -651,13 +647,13 @@ void learn_pitchbend(uint8_t channel, int pitch)
 
     if ( globalAddrCnt == 0 )
     {
-    for ( int8_t row = 0; row < 4; ++row )
-    {
-        if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
+        for ( int8_t row = 0; row < 4; ++row )
         {
-            learn.program(row, MessageType::PitchBend, channel, row);
+            if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
+            {
+                learn.program(row, MessageType::PitchBend, channel, row);
+            }
         }
-    }
     }
 }
 
@@ -665,8 +661,62 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
 {
     --channel;
 
-    if ( channels.getChannelType(channel) == ChannelType::Percussion )
-    {
+    switch ( channels.getChannelType(channel) ) {
+        case ChannelType::Keys:
+        for ( int8_t t = (int8_t)MessageType::Keys; t <= (int8_t)MessageType::KeysPolyPressure; ++t )
+        {
+            MessageType type = (MessageType)t;
+            if ( address.getState((int8_t)type, channel) )
+            {
+                int8_t globalAddr = address.get((int8_t)type, channel);
+                int8_t polyAddr = learnToPolyMap[globalAddr];
+                
+                // Schrijf row.
+                int8_t row;
+
+                if ( polyAddr > -1 ) row = getRowFromSplit(note, polyAddr);
+                else row = learn.getRow(globalAddr);
+
+
+                // Output.
+                static int8_t velocitySave = 0;                
+                
+                switch ( type )
+                {
+                    case MessageType::Keys:
+                    {
+    //                        if ( keysActive[row].noteOn(note) ) // Regel alleen nodig met LastNoteSmall voor de veiligheid.
+    //                        {
+    //                            lastNote[row].noteOn(note, velocity);
+    //                        }
+                        keysActive[row].noteOn(note);
+                        lastNote[row].noteOn(keysActive[row].getPosition(note), velocity);            
+                        velocitySave = lastNote[row].getVelocity();
+    
+                        int8_t positionsOfKey = lastNote[row].getPitch();
+                        cvOut.set(row, keysActive[row].getKey(positionsOfKey) << 1);
+                        gate_out(row, true);
+                    }
+                    break;
+                
+                    case MessageType::KeysVelocity:
+                    cvOut.set(row, velocitySave << 1);
+                    break;
+                
+                    case MessageType::KeysPolyPressure:
+                    learn.setRow(globalAddr, row);
+                    rowNote[row] = note; // Nog nodig, want je hebt al key keysActive?
+
+                    keysActive[row].noteOn(note);
+                    break;
+                        
+                    default: break;
+                }
+            }
+        }
+        break;
+            
+        case ChannelType::Percussion:
         MessageType type = MessageType::PercussionVelocity;
         if ( address.getState((int8_t)type, channel) )
         {
@@ -684,66 +734,10 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
                 return;
             }
         }
-    }
-    else
-    {
-        for ( int8_t t = (int8_t)MessageType::Keys; t <= (int8_t)MessageType::KeysPolyPressure; ++t )
-        {
-            MessageType type = (MessageType)t;
-            if ( address.getState((int8_t)type, channel) )
-            {
-                int8_t globalAddr = address.get((int8_t)type, channel);
-                int8_t polyAddr = learnToPolyMap[globalAddr];
-                
-                // Schrijf row.
-                int8_t row;
-
-                if ( polyAddr > -1 ) {
-                    switch ( channels.getChannelType(channel) ) {
-                    case ChannelType::KeysSplit:
-                        row = getRowFromSplit(note, polyAddr);
-                        break;
-                    default:
-                        break;
-                    }
-                }
-                else row = learn.getRow(globalAddr);
-
-
-                // Output.
-                static int8_t velocitySave = 0;                
-                
-                switch ( type )
-                {
-                    case MessageType::Keys:
-                    {
-//                        if ( keysActive[row].noteOn(note) ) // Regel alleen nodig met LastNoteSmall voor de veiligheid.
-//                        {
-//                            lastNote[row].noteOn(note, velocity);
-//                        }
-                        keysActive[row].noteOn(note);
-                        lastNote[row].noteOn(keysActive[row].getPosition(note), velocity);            
-                        velocitySave = lastNote[row].getVelocity();
-
-                        int8_t positionsOfKey = lastNote[row].getPitch();
-                        cvOut.set(row, keysActive[row].getKey(positionsOfKey) << 1);
-                        gate_out(row, true);
-                    }
-                    break;
-                
-                    case MessageType::KeysVelocity:
-                        cvOut.set(row, velocitySave << 1);
-                    break;
-                
-                    case MessageType::KeysPolyPressure:
-                        learn.setRow(globalAddr, row);
-                        rowNote[row] = note; // Nog nodig, want je hebt al key keysActive?
-
-                        keysActive[row].noteOn(note);
-                    default: break;
-                }
-            }
-        }
+        break;
+        
+        default:
+        break;
     }
 }
 
@@ -751,12 +745,8 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
 {
     --channel;
 
-    if ( channels.getChannelType(channel) == ChannelType::Percussion )
-    {
-        //Niks voor Perc off.
-    }
-    else
-    {
+    switch ( channels.getChannelType(channel) ) {
+        case ChannelType::Keys:
         for ( int8_t t = (int8_t)MessageType::Keys; t <= (int8_t)MessageType::KeysPolyPressure; t = t + 1 )
         {
             MessageType type = (MessageType)t;
@@ -769,11 +759,9 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
                 // Schrijf row.
                 if ( polyAddr > -1 ) //polyphony
                 {
-                    if ( channels.getChannelType(channel) == ChannelType::KeysSplit ) {
-                        static int8_t keyRow = 0;
-                        // Output.
-                        note_off_lastStage(globalAddr, type, note, velocity, getRowFromSplit(note, polyAddr), &keyRow);
-                    }
+                    static int8_t keyRow = 0;
+                    // Output.
+                    note_off_lastStage(globalAddr, type, note, velocity, getRowFromSplit(note, polyAddr), &keyRow);
                 }
                 else
                 {
@@ -783,6 +771,13 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
                 }
             }
         }
+        break;
+
+        case ChannelType::Percussion:
+        break;
+
+        default:
+        break;
     }
 }
 

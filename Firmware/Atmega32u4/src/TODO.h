@@ -1,6 +1,8 @@
 /*
 TODO:
 - Dubbelklik wisfunctie en ook uit eeprom wissen.
+- PercussionVelocity handling in noteOn lijkt niet te kloppen, niet aan note gekoppeld. Test dit.
+- Misschien percussion veranderen van trigger naar gate, kijk of je in de midi specificatie hierover iets kan vinden.
 
 BUGS:
  
