@@ -160,7 +160,7 @@ template <class type, size_t size> class Array {
     type data[size];
 
     public:
-    Array(type init)
+    Array(type init = 0)
     {
         for ( size_t i = 0; i < size; ++i )
         {

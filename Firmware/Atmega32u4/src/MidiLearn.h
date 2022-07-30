@@ -1,34 +1,6 @@
 #ifndef MidiLearn_h
 #define MidiLearn_h
 
-//enum class Type: int8_t {
-//    None, // Te veel ram? Deze kan weg. Gebruik "Size".
-//    Keys,// Te veel ram? Deze kan weg. Gebruik None of Size van KeyType class.
-//    ChannelPressure,
-//    ControlChange,
-//    PitchBend,
-//    Size
-//};
-
-enum class MessageType: int8_t {
-    Keys,
-    KeysVelocity,
-    KeysPolyPressure,
-    PercussionVelocity,
-    ChannelPressure,
-    ControlChange,
-    PitchBend,
-    Size
-};
-
-//enum class KeyType: int8_t {
-//    PercussionVelocity,
-//    KeysPitch,
-//    KeysVelocity,
-//    KeysPolyPressure,
-//    Size
-//};
-
 enum class ChannelType: int8_t {
     Keys,
     Percussion,
@@ -57,96 +29,44 @@ class Channels {
     }
 };
 
-template <int8_t addressAmount, int8_t rowAmount>
-class Programmer {
-    private:
+template <typename type_t, int8_t addressAmount>
+struct Programmer {
     // Wordt enkel uitgelezen in learn polyphony fase. Met een loop.
     int8_t rows[addressAmount];
     int8_t channels[addressAmount];
-    MessageType types[addressAmount];
-
-    int8_t percNotes[rowAmount];
-
-    void setType(int8_t a, MessageType t)
-    {
-        types[a] = t;
-    }
+    type_t types[addressAmount];
+    int8_t notes[addressAmount];
     
-    void setChannel(int8_t a, int8_t c)
-    {
-        channels[a] = c;
-    }
-    
-    public:
     Programmer()
     {
         for( int8_t a = 0; a < addressAmount; ++a )
         {
             rows[a] = -1;
             channels[a] = -1;
-            types[a] = MessageType::Size;
-        }
-
-        for( int8_t r = 0; r < rowAmount; ++r )
-        {
-            percNotes[r] = -1;
+            types[a] = (type_t)-1;
+            notes[a] = -1;
         }
     }
 
-    void program(int8_t addr, MessageType t, int8_t c, int8_t row)
+    void program(int8_t a, type_t t, int8_t c, int8_t r, int8_t n = -1)
     {
         // Write
-        setChannel(addr, c);
-        setType(addr, t);
-        setRow(addr, row);
-    
-        if ( t == MessageType::Keys )
-        {
-            // Clear row of percNotes.
-            setPercNote(getRow(addr), -1);
-        }
-    }
-
-    MessageType getType(int8_t a)
-    {
-        return types[a];
-    }
-
-    int8_t getChannel(int8_t a)
-    {
-        return channels[a];
-    }
-
-    int8_t getRow(int8_t a)
-    {
-        return rows[a];
-    }
-    
-    int8_t getPercNote(int8_t r)
-    {
-        return percNotes[r];
-    }
-
-    void setRow(int8_t a, int8_t row)
-    {
-        rows[a] = row;
-    }
-
-    void setPercNote(int8_t r, int8_t note)
-    {
-        percNotes[r] = note;
+        rows[a] = r;
+        channels[a] = c;
+        types[a] = t;
+        notes[a] = n;
     }
 };
 
-template <int8_t addressAmount, int8_t outputsAmount = 4, uint8_t noteAmount = 128>
+template <int8_t addressAmount, int8_t outputsAmount = 4>
 class Polyphony {
     public:
 //    int8_t rows[addressAmount][noteAmount];
-    int8_t counter[addressAmount];
+//    int8_t counter[addressAmount];
     int8_t width[addressAmount];
     int8_t rowAtCount[addressAmount][outputsAmount];
 
-    int8_t countAtRow[outputsAmount];
+//    int8_t countAtRow[outputsAmount];
     int8_t boundary[outputsAmount];
 
     Polyphony()
@@ -161,12 +81,12 @@ class Polyphony {
 
         for ( int8_t a = 0; a < addressAmount; ++a )
         {
-            counter[a] = 0;
+//            counter[a] = 0;
             width[a] = 0;
 
             for ( int8_t o = 0; o < outputsAmount; ++o )
             {
-                countAtRow[o] = 0;
+//                countAtRow[o] = 0;
                 rowAtCount[a][o] = -1;
             }
         }
@@ -177,79 +97,5 @@ class Polyphony {
         }
     }
 };
-
-// enum Type {
-//         Keys,
-//         KeysVelocity,
-//         KeysPolyPressure,
-//         Percussion,
-//         PercussionVelocity,
-//         ChannelPressure,
-//         ControlChange,
-//         PitchBend
-//     };
-
-// union MidiConstruct {
-//     struct KeyConstruct {
-//         int8_t channel = 0;
-
-//         enum {
-//             keys,
-//             keysVelocity,
-//             keysPolyPressure,
-//             channelPressure,
-//             pitchBend
-//         } type = keys;
-        
-//         union {
-//             bool mono = true;
-//             int8_t polyphonic = 0;
-//             int8_t keysplit = 0;
-//         } polyType.mono = true;
-//     };
-
-//     struct PercussionConstruct {
-//         int8_t channel = 0;
-
-//         enum {
-//             percussion,
-//             percussionVelocity,
-//         } type = percussion;
-        
-//         enum {
-//             none,
-//             dual,
-//             all
-//         } choke;
-//     };
-
-//     struct ControlChangeConstruct {
-//         int8_t channel = 0;
-
-//         union Type {
-//             struct {
-//                 int8_t number = 0;
-//             } basic;
-
-//             struct {
-//                 int8_t msb = 0;
-//                 int8_t lsb = 32;
-//             } hires;
-
-//             struct {
-//                 int8_t msb = 0;
-//                 bool nrpn_98 = false;
-//                 bool nrpn_99 = false;
-//             } basicNrpn;
-
-//             struct {
-//                 int8_t msb = 0;
-//                 int8_t lsb = 32;
-//                 bool nrpn_98 = false;
-//                 bool nrpn_99 = false;
-//             } hiresNrpn;
-//         };
-//     };
-// };
 
 #endif

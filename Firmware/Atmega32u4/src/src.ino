@@ -40,20 +40,36 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 // Terminal count
 #define PWM6_13_MAX OCR4C
 
-struct CvOut {
-    uint8_t values[4] = {0, 0, 0, 0};
+enum class Gate: int8_t {
+    Percussion,
+    Size
+};
 
-    uint8_t get(int8_t row)
-    {
+enum class Cv: int8_t {
+    KeysPitch,
+    KeysVelocity,
+    KeysPolyPressure,
+    PercussionVelocity,
+    ChannelPressure,
+    ControlChange,
+    PitchBend,
+    Size
+};
+
+const int8_t rowAmount = 4;
+const int8_t channelAmount = 16;
+
+struct CvOut {
+    uint8_t values[rowAmount] = {0, 0, 0, 0};
+
+    uint8_t get(int8_t row) {
         return values[row];
     }
     
-    void set(int8_t row, uint8_t value)
-    {
+    void set(int8_t row, uint8_t value) {
         values[row] = value;
         
-        switch (row)
-        {
+        switch (row) {
             case 0: PWM6 = value; break;
             case 1: PWM9 = value; break;
             case 2: PWM10 = value; break;
@@ -65,36 +81,39 @@ struct CvOut {
     }
 } cvOut;
 
-const uint8_t rowTo_32u4PINF_bit[4] = {0x80, 0x40, 0x20, 0x10};
+const uint8_t rowTo_32u4PINF_bit[rowAmount] = {0x80, 0x40, 0x20, 0x10};
 
 Channels channels;
 
-const int8_t addressAmount = 4;
-const int8_t rowAmount = 4;
-typedef Programmer <addressAmount, rowAmount> learn_t;
-learn_t learn; //Saved in eeprom
+const int8_t addressAmount = rowAmount;
+const int8_t percAddressAmount = rowAmount;
+const int8_t cvAddressAmount = rowAmount;
 
-typedef TwoDimensionalLookup <(int8_t)MessageType::Size, 16> address_t;
-address_t address; //Saved in eeprom
+typedef TwoDimensionalLookup <(1, channelAmount> percAddress_t;
+percAddress_t percAddress; //Saved in eeprom
 
-int8_t learnToPolyMap[addressAmount] = {-1, -1, -1, -1}; //Saved in eeprom
-const int8_t polyAddressAmount = 2;
-typedef Polyphony <polyAddressAmount> poly_t;
-poly_t polyphony; //Saved in eeprom
+typedef TwoDimensionalLookup <(int8_t)Cv::Size, channelAmount> cvAddress_t;
+cvAddress_t cvAddress; //Saved in eeprom
 
-const uint8_t keysActiveSize = 4;
+typedef Programmer <Gate, percAddressAmount> learnGate_t;
+learnGate_t learnGate; //Saved in eeprom
+
+typedef Programmer <Cv, cvAddressAmount> learnCv_t;
+learnCv_t learnCv; //Saved in eeprom
+
+const uint8_t keysActiveSize = rowAmount;
 //typedef ActiveKeysSmall <10> keysActive_t;
 typedef ActiveKeysFast2 <10> keysActive_t;
 keysActive_t keysActive[keysActiveSize];
 
-const uint8_t lastNoteSize = 4;
-//int8_t learnToLastNoteMap[4] = {-1, -1, -1, -1}; //Saved in eeprom
+const uint8_t lastNoteSize = rowAmount;
+//int8_t addressToLastNoteMap[4] = {-1, -1, -1, -1}; //Saved in eeprom
 //MidiLastNote lastNote[4];
 //LastNoteSmall <10> lastNote[4];
 typedef LastNoteFast <10> lastNote_t;
 lastNote_t lastNote[lastNoteSize];
 
-int8_t rowNote[4] = {-1, -1, -1, -1};
+// int8_t rowNote[rowAmount] = {-1, -1, -1, -1};
 
 struct LearnCc {
     bool wait_for_98 = false;
@@ -110,8 +129,14 @@ struct Cc {
     uint8_t msb = 255;
 } cc[4];
 
+
+//int8_t learnToPolyMap[addressAmount] = {-1, -1, -1, -1}; //Saved in eeprom
+typedef Polyphony <addressAmount, rowAmount> split_t;
+split_t gateSplit;
+split_t cvSplit;
+
 // Voor PolyPressure welke fingers actief zijn en hoeveel.
-int8_t learnToPressureMap[4] = {-1, -1, -1, -1}; //Saved in eeprom
+int8_t addressToPressureMap[4] = {-1, -1, -1, -1}; //Saved in eeprom
 //ActiveKeysSmall <10> [2];
 const int8_t pressuresSize = 2;
 typedef Array <int8_t, 10> pressure_t;
@@ -129,8 +154,7 @@ void setup()
 	load_learn_status();
     writeGlobalAddresses();
     writeKeyAftertouchMapping();
-    writePolyAddresses();
-    checkPolyphony();
+    checkSplit();
 }
 
 void setinputsandoutputs()
@@ -222,13 +246,15 @@ void configuremidisethandle()
 void load_learn_status()
 {
     uint16_t a = 0; // eeprom address.
-    EEPROM.get(a, learn); a += sizeof(learn);
-    EEPROM.get(a, address); a += sizeof(address);
-    EEPROM.get(a, polyphony); a += sizeof(polyphony);
+    EEPROM.get(a, learnGate); a += sizeof(learnGate);
+    EEPROM.get(a, learnCv); a += sizeof(learnCv);
+    EEPROM.get(a, percAddress); a += sizeof(percAddress);
+    EEPROM.get(a, cvAddress); a += sizeof(cvAddress);
+    EEPROM.get(a, gateSplit); a += sizeof(gateSplit);
+    EEPROM.get(a, cvSplit); a += sizeof(cvSplit);
     
-    for ( int8_t i = 0; i < 4; ++i ) {
-        EEPROM.get(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
-        EEPROM.get(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
+    for ( int8_t i = 0; i < cvAddressAmount; ++i ) {
+        EEPROM.get(a, addressToPressureMap[i]); a += sizeof(addressToPressureMap[i]);
         EEPROM.get(a, cc[i]); a += sizeof(cc[i]);
     }
 
@@ -238,13 +264,15 @@ void load_learn_status()
 void save_learn_status()
 {
     uint16_t a = 0; // eeprom address.
-    EEPROM.put(a, learn); a += sizeof(learn);
-    EEPROM.put(a, address); a += sizeof(address);
-    EEPROM.put(a, polyphony); a += sizeof(polyphony);
+    EEPROM.put(a, learnGate); a += sizeof(learnGate);
+    EEPROM.put(a, learnCv); a += sizeof(learnCv);
+    EEPROM.put(a, percAddress); a += sizeof(percAddress);
+    EEPROM.put(a, cvAddress); a += sizeof(cvAddress);
+    EEPROM.put(a, gateSplit); a += sizeof(gateSplit);
+    EEPROM.put(a, cvSplit); a += sizeof(cvSplit);
     
-    for ( int8_t i = 0; i < 4; ++i ) {
-        EEPROM.put(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
-        EEPROM.put(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
+    for ( int8_t i = 0; i < cvAddressAmount; ++i ) {
+        EEPROM.put(a, addressToPressureMap[i]); a += sizeof(addressToPressureMap[i]);
         EEPROM.put(a, cc[i]); a += sizeof(cc[i]);
     }
 
@@ -262,7 +290,6 @@ void loop()
 
 int8_t clockCounter = -1;
 int8_t resetCounter = -1;
-int8_t trigCounter[4] = {-1, -1, -1, -1};
 
 void controlThread()
 {
@@ -285,28 +312,18 @@ void controlThread()
             case 0: digitalWrite(RESET_PIN, LOW);
             default: --resetCounter; break;
         }
-        
-        for ( int8_t row = 0; row < 4; ++row )
-        {
-            switch ( trigCounter[row] )
-            {
-                case -1: break;
-                case 0: gate_out(row, LOW);
-                default: --trigCounter[row]; break;
-            }
-        }
     }
 }
 
 int8_t globalAddrCnt = 0;
 
-void clearRowData()
-{
-    for ( int8_t row = 0; row < rowAmount; ++row )
-    {
-        rowNote[row] = -1;
-    }
-}
+// void clearRowData()
+// {
+//     for ( int8_t row = 0; row < rowAmount; ++row )
+//     {
+//         rowNote[row] = -1;
+//     }
+// }
 
 void clearKeysActive()
 {
@@ -316,12 +333,20 @@ void clearKeysActive()
     }
 }
 
+void clearLastNotes()
+{
+    for ( int8_t addr = 0; addr < keysActiveSize; ++addr )
+    {
+        lastNote[addr].reset();
+    }
+}
+
 void setupLearn()
 {
-    for ( int8_t row = 0; row < 4; ++row )
+    for ( int8_t row = 0; row < rowAmount; ++row )
     {
-        bool buttonStates[4];
-        static bool lastButtonStates[4] = {0, 0, 0, 0};
+        bool buttonStates[rowAmount];
+        static bool lastButtonStates[rowAmount] = {0, 0, 0, 0};
 
         buttonStates[row] = ~PINF & rowTo_32u4PINF_bit[row];
         int8_t deltaButtonState = buttonStates[row] - lastButtonStates[row];
@@ -332,9 +357,11 @@ void setupLearn()
             delay(200); // against hysterisis
 
             globalAddrCnt = 0; // Reset global address counter.
-            address.fill(); // Reset all global addresses.
-            clearRowData(); // Reset global rowNote data.
+            percAddress.fill(); // Reset all global addresses.
+            cvAddress.fill(); // Reset all global addresses.
+            // clearRowData(); // Reset global rowNote data.
             clearKeysActive();
+            clearLastNotes();
 
             // reset learnCc.
             learnCc.wait_for_98 = false;
@@ -357,8 +384,7 @@ void setupLearn()
         {
             writeGlobalAddresses();
             writeKeyAftertouchMapping();
-            writePolyAddresses();
-            checkPolyphony();
+            checkSplit();
             save_learn_status();
             
             delay(200); // against hysterisis
@@ -380,11 +406,19 @@ void setupLearn()
 void writeGlobalAddresses()
 {
     // Write addresses for learned types.
-    for ( int8_t addr = 0; addr < addressAmount; ++addr )
+    for ( int8_t addr = 0; addr < percAddressAmount; ++addr )
     {
-        if ( learn.getRow(addr) > -1 )
+        if ( learnGate.rows[addr] > -1 )
         {
-            address.set((int8_t)learn.getType(addr), learn.getChannel(addr), addr);
+            percAddress.set((int8_t)learnGate.types[addr], learnGate.channels[addr], addr);
+        }
+    }
+
+    for ( int8_t addr = 0; addr < cvAddressAmount; ++addr )
+    {
+        if ( learnCv.rows[addr] > -1 )
+        {
+            cvAddress.set((int8_t)learnCv.types[addr], learnCv.channels[addr], addr);
         }
     }
 }
@@ -392,22 +426,22 @@ void writeGlobalAddresses()
 void writeKeyAftertouchMapping()
 {
     // Reset
-    for ( int8_t addr = 0; addr < addressAmount; ++addr )
+    for ( int8_t addr = 0; addr < cvAddressAmount; ++addr )
     {
-        learnToPressureMap[addr] = -1;
+        addressToPressureMap[addr] = -1;
     }
 
     int8_t count = 0;
     
     for ( int8_t channel = 0; channel < 16; ++channel )
     {
-        if ( channels.getChannelType(channel) != ChannelType::Percussion )
+        if ( channels.getChannelType(channel) == ChannelType::Keys )
         {
-            for ( int8_t addr = 0; addr < addressAmount; ++addr )
+            for ( int8_t addr = 0; addr < cvAddressAmount; ++addr )
             {
-                if ( learn.getType(addr) == MessageType::KeysPolyPressure and learn.getChannel(addr) == channel )
+                if ( learnCv.types[addr] == Cv::KeysPolyPressure and learnCv.channels[addr] == channel )
                 {
-                    learnToPressureMap[addr] = count;
+                    addressToPressureMap[addr] = count;
                     ++count;
                 }
             }
@@ -415,136 +449,91 @@ void writeKeyAftertouchMapping()
     }
 }
 
-void writePolyAddresses()
+void checkSplit()
 {
-    // Reset
-    for ( int8_t addr = 0; addr < addressAmount; ++addr )
-    {
-        learnToPolyMap[addr] = -1;
+    for ( int8_t a = 0; a < percAddressAmount; ++a ) {
+        gateSplit.width[a] = 0; // Reset width.
+        // Reset count and row info.
+        for ( int8_t count = 0; count < rowAmount; ++count ) {
+            gateSplit.rowAtCount[a][count] = -1;
+//            int8_t row = count;
+//            gateSplit.countAtRow[row] = 0;
+        }
     }
-    
-    // Include in polyphony if type and channel match more than 1 time found.
-    int8_t polyAddrCount = 0;
-    for ( int8_t channel = 0; channel < 16; ++channel )
-    {
-        if ( channels.getChannelType(channel) != ChannelType::Percussion )
-        {
-            for ( int8_t type = (int8_t)MessageType::Keys; type <= (int8_t)MessageType::KeysPolyPressure; ++type )
-            {
-                int8_t polyWidth = 0;
-                
-                for ( int8_t addr = 0; addr < addressAmount; ++addr )
-                {
-                    if ( learn.getType(addr) == (MessageType)type and learn.getChannel(addr) == channel )
-                    {
-                        learnToPolyMap[addr] = polyAddrCount;
-                        ++polyWidth;
 
-                        // Reset het poly adres als het mono blijkt te zijn.
-                        // Niet mono? Dan poly adres counter incrementen.
-                        if ( addr == address.get((int8_t)type, channel) )
-                        {
-                            if ( polyWidth == 1  ) learnToPolyMap[addr] = -1;
-                            else ++polyAddrCount;
-                            break;
-                        }
-                    }
+    for ( int8_t a = 0; a < cvAddressAmount; ++a ) {
+        cvSplit.width[a] = 0; // Reset width.
+        // Reset count and row info.
+        for ( int8_t count = 0; count < rowAmount; ++count ) {
+            cvSplit.rowAtCount[a][count] = -1;
+//            int8_t row = count;
+//            cvSplit.countAtRow[row] = 0;
+        }
+    }
+
+    // Write.
+    for ( int8_t channel = 0; channel < 16; ++channel ) {
+        if ( channels.getChannelType(channel) != ChannelType::Keys ) continue;
+        
+        Gate gateType = Gate::Keys;
+        int8_t keyAddr = address.get((int8_t)gateType, channel);
+        if ( keyAddr < 0 ) continue;
+        
+        for ( int8_t addr = 0; addr < percAddressAmount; ++addr ) {
+            if ( learnGate.types[addr] == gateType and learnGate.channels[addr] == channel ) {
+                gateSplit.rowAtCount[keyAddr][gateSplit.width[keyAddr]] = learnGate.rows[addr];
+                ++gateSplit.width[keyAddr];
+            }
+        }
+
+        if ( gateSplit.width[keyAddr] < 1 ) continue;
+
+        fillSplitBoundary <learnGate_t, Gate> (&gateSplit, learnGate, gateType, channel);
+        
+        
+        for ( int8_t type = (int8_t)Cv::KeysPitch; type <= (int8_t)Cv::KeysPolyPressure; ++type ) {
+            int8_t cvAddr = address.get(type, channel);
+            if ( cvAddr < 0 ) continue;
+            
+            for ( int8_t addr = 0; addr < cvAddressAmount; ++addr ) {
+                if ( learnCv.types[addr] == (Cv)type and learnCv.channels[addr] == channel ) {
+                    cvSplit.rowAtCount[cvAddr][cvSplit.width[keyAddr]] = learnCv.rows[addr];
+                    ++cvSplit.width[cvAddr];
                 }
+            }
+
+            if ( cvSplit.width[keyAddr] < 1 ) continue;
+            fillSplitBoundary <learnCv_t, Cv> (&cvSplit, learnCv, type, channel);
+            
+            if ( cvSplit.width[cvAddr] != gateSplit.width[keyAddr] ) {
+                cvSplit.width[cvAddr] = 1;
             }
         }
     }
 }
 
-void checkPolyphony()
+template <typename learn_t, typename type_t>
+void fillSplitBoundary(split_t *split, learn_t learn, type_t type, int8_t channel)
 {
-    for ( int8_t a = 0; a < polyAddressAmount; ++a )
-    {
-        // Reset width.
-        polyphony.width[a] = 0;
-
-        // Reset counter
-        polyphony.counter[a] = 0;
-
-        // Reset count and row info.
-        for ( int8_t count = 0; count < 4; ++count )
-        {
-            polyphony.rowAtCount[a][count] = -1;
-
-            int8_t row = count;
-            polyphony.countAtRow[row] = 0;
-        }
-    }
-
-    // Write all width
-    for ( int8_t a = 0; a < addressAmount; ++a )
-    {
-        int8_t polyAddr = learnToPolyMap[a];
+    const int8_t boundariesHigh[4][4] = { // [width][outputCount]
+        {127, 127, 127, 127},
+        {63, 127, 127, 127},
+        {42, 85, 127, 127},
+        {31, 63, 95, 127}
+    };
         
-        if ( polyAddr > -1 )
-        {
-            ++polyphony.width[polyAddr];
-        }
-    }
-
-    // Write width for KeysVelocity and KeysPolyPressure (not higher than Key width).
-    for ( int8_t channel = 0; channel < 16; ++channel )
-    {
-        if ( channels.getChannelType(channel) != ChannelType::Percussion )
-        {
-            int8_t keyAddr = address.get((int8_t)MessageType::Keys, channel);
-            int8_t velAddr = address.get((int8_t)MessageType::KeysVelocity, channel);
-            int8_t pressAddr = address.get((int8_t)MessageType::KeysPolyPressure, channel);
-
-            if ( keyAddr > -1 )
-            {
-                if ( velAddr > -1 ) polyphony.width[velAddr] = min(polyphony.width[keyAddr], polyphony.width[velAddr]);
-                if ( pressAddr > -1 ) polyphony.width[pressAddr] = min(polyphony.width[keyAddr], polyphony.width[pressAddr]);
-            }
-        }
-    }
-
-    // Write rowAtCount
-    for ( int8_t a = 0; a < addressAmount; ++a )
-    {
-        int8_t polyAddr = learnToPolyMap[a];
-        
-        if ( polyAddr > -1 )
-        {
-            int8_t count = polyphony.counter[polyAddr]++;
-            
-            if ( count < polyphony.width[polyAddr] ) polyphony.rowAtCount[polyAddr][count] = learn.getRow(a);
-        }
-    }
-
-    // Write boundary.
-    for ( int8_t a = 0; a < addressAmount; ++a )
-    {
-        int8_t polyAddr = learnToPolyMap[a];
-        
-        if ( polyAddr > -1 )
-        {
-            int8_t row = learn.getRow(a);
-            int8_t width = polyphony.width[polyAddr];
-            
-            if ( width > 1 )
-            {
-                // [width][row]
-                const int8_t boundariesHigh[3][4] = {
-                    {63, 127, 127, 127},
-                    {42, 85, 127, 127},
-                    {31, 63, 95, 127}
-                };
-                
-                polyphony.boundary[row] = boundariesHigh[width - 2][row];
-            }
-            else polyphony.boundary[row] = 127;
-        }
-    }
+    int8_t outputCount = 0;
     
-    // Clear all counters.
-    for ( int8_t a = 0; a < polyAddressAmount; ++a )
-    {
-        polyphony.counter[a] = 0;
+    for ( int8_t r = 0; r < rowAmount; ++r ) {
+        if ( learn.types[r] != type ) continue;
+
+        int8_t a = address.get((int8_t)type, channel);
+        if ( a < 0 ) continue;
+        int8_t width = split->width[a];
+        if ( width < 1 ) continue;
+
+        split->boundary[learn.rows[r]] = boundariesHigh[width - 1][outputCount];
+        outputCount += 1;
     }
 }
 
@@ -564,25 +553,22 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
                 switch ( globalAddrCnt )
                 {
                     case 0:
-                        learn.program(row, MessageType::Keys, channel, row);
+                        learn.programGate(row, MessageType::Keys, channel, row);
+                        learn.programCv(row, MessageType::KeysPitch, channel, row);
                     break;
                     
                     case 1:
-                        learn.program(row, MessageType::KeysVelocity, channel, row);
+                        learn.programCv(row, MessageType::KeysVelocity, channel, row);
                     break;
                     
                     case 2:
                     // Bij ontvangst van polyaftertouch wordt channelaftertouch hier naar toe veranderd.
-                    // Maar kan niet terug veranderd worden naar channlpressure. Dus polypressure heeft prio.
-                        learn.program(row, MessageType::ChannelPressure, channel, row);
-
-                    // Voor note herkenning bij polypressure.
-                    // Zorgt ervoor dat polypressure alleen tijdens de huidige leerfase ingeleerd kan worden. (Want rowNote wordt weer gereset.
-                        rowNote[row] = note;
+                    // Maar kan niet terug veranderd worden naar channelpressure. Dus polypressure heeft prio.
+                        learn.programCv(row, MessageType::ChannelPressure, channel, row, note);
                     break;
 
                     case 3:
-                        learn.program(row, MessageType::PitchBend, channel, row);
+                        learn.programCv(row, MessageType::PitchBend, channel, row);
                     break;
                     
                     default:
@@ -591,8 +577,8 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
             break;
             
             case ChannelType::Percussion:
-                learn.program(row, MessageType::PercussionVelocity, channel, row);
-                learn.setPercNote(row, channel, note);
+                learn.programGate(row, MessageType::Percussion, channel, row, note);
+                learn.programCv(row, MessageType::PercussionVelocity, channel, row, note);
             break;
 
             default:
@@ -611,9 +597,9 @@ void learn_atc(uint8_t channel, uint8_t aftertouch)
 //    for ( int8_t row = 0; row < 4; ++row )
 //    {
 //        if (
-//            learn.getChannel(row) == channel
+//            learn.channels[row] == channel
 //            and
-//            learn.getType(row) == MessageType::ChannelPressure
+//            learn.types[row] == MessageType::ChannelPressure
 //            and
 //            (~PINF & rowTo_32u4PINF_bit[row]) > 0
 //        ) {
@@ -629,14 +615,14 @@ void learn_atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
     for ( int8_t row = 0; row < 4; ++row )
     {
         if (
-            learn.getChannel(row) == channel
+            learn.channels[row] == channel
             and
-            learn.getType(row) == MessageType::ChannelPressure
+            learn.types[row] == MessageType::ChannelPressure
             and
             (~PINF & rowTo_32u4PINF_bit[row]) > 0
-            and rowNote[row] == note
+            and learnCv.notes[row] == note
         ) {
-            learn.program(row, MessageType::KeysPolyPressure, channel, row);
+            learn.programCv(row, MessageType::KeysPolyPressure, channel, row);
         }
     }
 }
@@ -651,7 +637,7 @@ void learn_pitchbend(uint8_t channel, int pitch)
         {
             if (  (~PINF & rowTo_32u4PINF_bit[row]) > 0 )
             {
-                learn.program(row, MessageType::PitchBend, channel, row);
+                learn.programCv(row, MessageType::PitchBend, channel, row);
             }
         }
     }
@@ -663,27 +649,20 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
 
     switch ( channels.getChannelType(channel) ) {
         case ChannelType::Keys:
-        for ( int8_t t = (int8_t)MessageType::Keys; t <= (int8_t)MessageType::KeysPolyPressure; ++t )
+        for ( int8_t t = (int8_t)Cv::KeysPitch; t <= (int8_t)Cv::KeysPolyPressure; ++t )
         {
-            MessageType type = (MessageType)t;
+            Cv type = (Cv)t;
             if ( address.getState((int8_t)type, channel) )
             {
                 int8_t globalAddr = address.get((int8_t)type, channel);
-                int8_t polyAddr = learnToPolyMap[globalAddr];
-                
-                // Schrijf row.
-                int8_t row;
-
-                if ( polyAddr > -1 ) row = getRowFromSplit(note, polyAddr);
-                else row = learn.getRow(globalAddr);
-
+                int8_t row = getRowFromSplit(note, polyAddr);
 
                 // Output.
                 static int8_t velocitySave = 0;                
                 
                 switch ( type )
                 {
-                    case MessageType::Keys:
+                    case Cv::KeysPitch:
                     {
     //                        if ( keysActive[row].noteOn(note) ) // Regel alleen nodig met LastNoteSmall voor de veiligheid.
     //                        {
@@ -699,12 +678,12 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
                     }
                     break;
                 
-                    case MessageType::KeysVelocity:
+                    case Cv::KeysVelocity:
                     cvOut.set(row, velocitySave << 1);
                     break;
                 
-                    case MessageType::KeysPolyPressure:
-                    learn.setRow(globalAddr, row);
+                    case Cv::KeysPolyPressure:
+                    learnCv.rows[globalAddr] = row;;
                     rowNote[row] = note; // Nog nodig, want je hebt al key keysActive?
 
                     keysActive[row].noteOn(note);
@@ -717,31 +696,36 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
         break;
             
         case ChannelType::Percussion:
-        MessageType type = MessageType::PercussionVelocity;
-        if ( address.getState((int8_t)type, channel) )
-        {
-            int8_t globalAddr = address.get((int8_t)type, channel);
-            int8_t row = learn.getRow(globalAddr);
-            cvOut.set(row, velocity << 1);
-        }
-    
-        for ( int8_t row = 0; row < 4; ++row )
-        {
-            if ( note == learn.getPercNote(row) )
-            {
-                int8_t *chokeNotes = percGetChokeNotes(note);
-
-                if ( chokeNotes[0] > 0 ) {
-                    for ( int8_t r = 0; r < 4 ++r ) {
-                        if ( learn.perCvState[r] && (chokeNotes[1] == learn.getPercNote(r) || chokeNotes[2] == learn.getPercNote(r)) ) {
-                            cvOut.set(row, 0);
-                        }
-                    }
+        Cv type = Cv::PercussionVelocity;
+        if ( address.getState((int8_t)type, channel) ) {
+            // handle velocity.
+            for ( int8_t row = 0; row < 4; ++row ) {
+                if ( note == learnCv.notes(row) ) {
+                    cvOut.set(row, velocity << 1);
+                    break;
                 }
-                
-                trigCounter[row] = PULSE_LENGTH_MS;
-                gate_out(row, true);
-                return;
+            }
+        }
+
+        Gate type = Gate::Percussion;
+        if ( address.getState((int8_t)type, channel) ) {
+            // handle choke and gate output.
+            int8_t *chokeNotes = percGetChokeNotes(note);
+            for ( int8_t row = 0; row < 4; ++row ) {
+                // handle cv/gate choke: cv choke first: because of the cv slewing (ongeveer 0,5 ms).
+                if ( chokeNotes[0] == learnCv.notes(row) ) {
+                    if ( chokeNotes[0] == learnCv.notes(row) ) cvOut.set(row, 0);
+                    gate_out(row, false);
+                } else if ( chokeNotes[1] == learnCv.notes(row) ) {
+                    if ( chokeNotes[1] == learnCv.notes(row) ) cvOut.set(row, 0);
+                    gate_out(row, false);
+                }
+
+                // handle gate.
+                if ( note == learnCv.notes(row) ) {
+                    gate_out(row, true);
+                    break;
+                }
             }
         }
         break;
@@ -778,34 +762,42 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
     --channel;
 
     switch ( channels.getChannelType(channel) ) {
-        case ChannelType::Keys:
-        for ( int8_t t = (int8_t)MessageType::Keys; t <= (int8_t)MessageType::KeysPolyPressure; t = t + 1 )
-        {
-            MessageType type = (MessageType)t;
+        case ChannelType::Keys:   
+        for ( int8_t t = (int8_t)Cv::KeysPitch; t <= (int8_t)Cv::KeysPolyPressure; t = t + 1 ) {
+            Cv type = (Cv)t;
             
-            if ( address.getState((int8_t)type, channel) )
-            {
+            if ( address.getState((int8_t)type, channel) ) {
                 int8_t globalAddr = address.get((int8_t)type, channel);
-                int8_t polyAddr = learnToPolyMap[globalAddr];
-                
-                // Schrijf row.
-                if ( polyAddr > -1 ) //polyphony
-                {
-                    static int8_t keyRow = 0;
-                    // Output.
-                    note_off_lastStage(globalAddr, type, note, velocity, getRowFromSplit(note, polyAddr), &keyRow);
-                }
-                else
-                {
-                    static int8_t keyRow = 0;
-                    // Output.
-                    note_off_lastStage(globalAddr, type, note, velocity, learn.getRow(globalAddr), &keyRow);
-                }
+                static int8_t keyRow = 0;
+                // Output.
+                note_off_lastStage <Cv> (globalAddr, type, note, velocity, getRowFromSplit(note, polyAddr), &keyRow);
             }
         }
         break;
 
         case ChannelType::Percussion:
+        Cv type = Cv::PercussionVelocity;
+        if ( address.getState((int8_t)type, channel) ) {
+            // handle velocity.
+            for ( int8_t row = 0; row < 4; ++row ) {
+                if ( note == learnCv.notes(row) ) {
+                    cvOut.set(row, 0);
+                    break;
+                }
+            }
+        }
+
+        Gate type = Gate::Percussion;
+        if ( address.getState((int8_t)type, channel) ) {
+            // handle gate.
+            for ( int8_t row = 0; row < 4; ++row ) {
+                // handle gate.
+                if ( note == learnCv.notes(row) ) {
+                    gate_out(row, false);
+                    break;
+                }
+            }
+        }
         break;
 
         default:
@@ -813,11 +805,12 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
     }
 }
 
-void note_off_lastStage(int8_t globalAddr, MessageType type, int8_t note, int8_t velocity, int8_t row, int8_t* keyRowPntr)
+template <typename type_t>
+void note_off_lastStage(int8_t globalAddr, type_t type, int8_t note, int8_t velocity, int8_t row, int8_t* keyRowPntr)
 {
     switch ( type )
     {
-        case MessageType::Keys:
+        case Cv::KeysPitch:
         {
             int8_t keyPosition = keysActive[row].getPosition(note);
             
@@ -835,22 +828,22 @@ void note_off_lastStage(int8_t globalAddr, MessageType type, int8_t note, int8_t
         }
         break;
 
-        case MessageType::KeysVelocity:
+        case Cv::KeysVelocity:
             cvOut.set(row, lastNote[*keyRowPntr].getVelocity() << 1);
         break;
 
-        case MessageType::KeysPolyPressure:
+        case Cv::KeysPolyPressure:
         {
             keysActive[row].noteOff(note);
             
             if ( lastNote[*keyRowPntr].getState() )
             {
-                learn.setRow(globalAddr, row);
+                learnCv.rows[globalAddr] = row;
                 int8_t positionOfLastKey = lastNote[*keyRowPntr].getPitch();
                 int8_t lastKey = keysActive[*keyRowPntr].getKey(positionOfLastKey);
-                rowNote[row] = lastKey; // Nog nodig, want je hebt al key keysActive?
+                learnCv.notes[row] = lastKey;
 
-                int8_t atpAddr = learnToPressureMap[row];
+                int8_t atpAddr = addressToPressureMap[row];
                 if ( atpAddr > -1 ) cvOut.set(row, pressures[atpAddr].get(keysActive[*keyRowPntr].getPosition(lastKey)) << 1);
             }
             else rowNote[row] = -1; // Nog nodig, want je hebt al key keysActive?
@@ -861,11 +854,11 @@ void note_off_lastStage(int8_t globalAddr, MessageType type, int8_t note, int8_t
 
 int8_t getRowFromSplit(int8_t note, int8_t polyAddr)
 {
-    for ( int8_t c = 0; polyphony.width[polyAddr]; ++c )
+    for ( int8_t c = 0; split.width[polyAddr]; ++c )
     {
-        int8_t rowTemp = polyphony.rowAtCount[polyAddr][c];
+        int8_t rowTemp = split.rowAtCount[polyAddr][c];
         
-        if ( note <= polyphony.boundary[rowTemp] )
+        if ( note <= split.boundary[rowTemp] )
         {
             return rowTemp;
         }
@@ -883,7 +876,7 @@ void atc(uint8_t channel, uint8_t aftertouch)
     if ( address.getState((int8_t)type, channel) )
     {
         int8_t globalAddr = address.get((int8_t)type, channel);
-        cvOut.set(learn.getRow(globalAddr), aftertouch << 1);
+        cvOut.set(learnCv.rows[globalAddr], aftertouch << 1);
     }
 }
 
@@ -896,15 +889,15 @@ void atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
     if ( address.getState((int8_t)type, channel) )
     {
         int8_t globalAddr = address.get((int8_t)type, channel);
-        int8_t polyAddr = learnToPolyMap[globalAddr];
+        int8_t polyAddr = addressToSplitMap[globalAddr];
         
         if ( polyAddr > -1 )
         {
-            for ( int8_t c = 0; c < polyphony.width[polyAddr]; ++c )
+            for ( int8_t c = 0; c < split.width[polyAddr]; ++c )
             {
-                int8_t row = polyphony.rowAtCount[polyAddr][c];
+                int8_t row = split.rowAtCount[polyAddr][c];
 
-                int8_t atpAddr = learnToPressureMap[row];
+                int8_t atpAddr = addressToPressureMap[row];
                 int8_t keyPos = keysActive[row].getPosition(note);
                 if ( atpAddr > -1 and keyPos > -1 ) pressures[atpAddr].set(keyPos, aftertouch);
                 
@@ -913,9 +906,9 @@ void atp(uint8_t channel, uint8_t note, uint8_t aftertouch)
         }
         else
         {
-            int8_t row = learn.getRow(globalAddr);
+            int8_t row = learnCv.rows[globalAddr];
 
-            int8_t atpAddr = learnToPressureMap[row];
+            int8_t atpAddr = addressToPressureMap[row];
             int8_t keyPos = keysActive[row].getPosition(note);
             if ( atpAddr > -1 and keyPos > -1 ) pressures[atpAddr].set(keyPos, aftertouch);
             if (  note == rowNote[row] ) cvOut.set(row, aftertouch << 1);
@@ -949,7 +942,7 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t val)
                                 cc[row].nrpn = learnCc.nrpn;
                                 cc[row].msb = number;
                                 cc[row].precision = false;
-                                learn.program(row, MessageType::ControlChange, channel, row);
+                                learn.programCv(row, Cv::ControlChange, channel, row);
                             }
                             return;
                         case 38:
@@ -963,7 +956,7 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t val)
                         default:
                             if ( channel == 15 ) { // for rotary encoder (at least with Allen&Heath) relative style.
                                 cc[row].msb = number;
-                                learn.program(row, MessageType::ControlChange, channel, row);
+                                learn.programCv(row, Cv::ControlChange, channel, row);
                             } else if ( number > 31 && number < 64 ) {
                                 LSB:
                                 if ( learnCc.wait_for_lsb && cc[row].msb == (number - 32) ) {
@@ -975,7 +968,7 @@ void learn_control_change(uint8_t channel, uint8_t number, uint8_t val)
                                 learnCc.wait_for_lsb = number < 32;
                                 cc[row].msb = number;
                                 cc[row].precision = false;
-                                learn.program(row, MessageType::ControlChange, channel, row);
+                                learn.programCv(row, Cv::ControlChange, channel, row);
     //                            sprintf(debug, "learn_cc r%d, n%d, v%d, nrpn%d, prec%d, msb%d", row, number, val, cc[row].nrpn, cc[row].precision, cc[row].msb);
     //                            MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
                             }
@@ -1030,7 +1023,7 @@ void control_change(uint8_t channel, uint8_t number, uint8_t val)
         break;
     default:
         for ( int8_t row = 0; row < 4; ++row ) {
-            if ( channel == learn.getChannel(row) && MessageType::ControlChange == learn.getType(row) ) {
+            if ( channel == learn.channels[row] && Cv::ControlChange == learn.types[row] ) {
                 switch ( number ) {
                 case 38:
                     if ( cc[row].nrpn == nrpn[channel] ) goto LSB;
@@ -1083,7 +1076,7 @@ void control_change(uint8_t channel, uint8_t number, uint8_t val)
     }
 //    for ( int8_t row = 0; row < 4; ++row ) {
 //        sprintf(debug, "play_cc r%d, n%d, v%d, nrpnC%d, nrpn%d, prec%d, msb%d",
-//            row, number, val, nrpn[learn.getChannel(row)], cc[row].nrpn, cc[row].precision, cc[row].msb);
+//            row, number, val, nrpn[learn.channels[row]], cc[row].nrpn, cc[row].precision, cc[row].msb);
 //        MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 //    }
 }
@@ -1097,7 +1090,7 @@ void pitchbend(uint8_t channel, int pitch)
     if ( address.getState((int8_t)type, channel) )
     {
         int8_t globalAddr = address.get((int8_t)type, channel);
-        cvOut.set(learn.getRow(globalAddr), (pitch + 8192) >> 6);
+        cvOut.set(learnCv.rows[globalAddr], (pitch + 8192) >> 6);
     }
 }
 
@@ -1149,7 +1142,7 @@ void activeSensing_onTimeout()
 void setAtChannelAllNotesOff(int8_t c) // when c == -1 all notes off.
 {
     for ( int8_t i = 0; i < 4; ++i ) {
-        if ( c == -1 || c == learn.getChannel(i) ) {
+        if ( c == -1 || c == learn.channels[i] ) {
             keysActive[i].reset();
             lastNote[i].reset();
         }
@@ -1159,7 +1152,7 @@ void setAtChannelAllNotesOff(int8_t c) // when c == -1 all notes off.
 void setAtChannelAllGatesLow(int8_t c) // when c == -1 all gates low.
 {
     for ( int8_t i = 0; i < 4; ++i ) {
-        if ( c == -1 || c == learn.getChannel(i) ) {
+        if ( c == -1 || c == learn.channels[i] ) {
             gate_out(i, 0);
         }
     }
@@ -1174,7 +1167,7 @@ void setAllClockOutputsLow()
 void setAtChannelAllVelocitiesLow(int8_t c) // when c == -1 all velocities low.
 {
     for ( int8_t i = 0; i < 4; ++i ) {
-        if ( (c == -1 || c == learn.getChannel(i)) && (learn.getType(i) == MessageType::KeysVelocity || learn.getType(i) == MessageType::PercussionVelocity) ) {
+        if ( (c == -1 || c == learn.channels[i]) && (learn.types[i] == Cv::KeysVelocity || learn.types[i] == Cv::PercussionVelocity) ) {
             cvOut.set(i, 0);
         }
     }
