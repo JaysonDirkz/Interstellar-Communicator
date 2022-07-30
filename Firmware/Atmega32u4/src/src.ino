@@ -717,34 +717,34 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
         break;
             
         case ChannelType::Percussion:
-        MessageType type = MessageType::PercussionVelocity;
-        if ( address.getState((int8_t)type, channel) )
-        {
-            int8_t globalAddr = address.get((int8_t)type, channel);
-            int8_t row = learn.getRow(globalAddr);
-            cvOut.set(row, velocity << 1);
-        }
-    
-        for ( int8_t row = 0; row < 4; ++row )
-        {
-            if ( note == learn.getPercNote(row) )
-            {
-                int8_t *chokeNotes = percGetChokeNotes(note);
+        // handle choke and gate/vel output.
+        int8_t *chokeNotes = percGetChokeNotes(note);
+        for ( int8_t row = 0; row < 4; ++row ) {
+            // handle cv/gate choke: cv choke first: because of the cv slewing (ongeveer 0,5 ms).
+            if ( chokeNotes[0] == learn.getPercNote(row) ) { // check first choke
+                // check for vel
+                if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
+                    cvOut.set(row, 0); // vel out
+                gate_out(row, false); //gate out
+            } else if ( chokeNotes[1] == learn.getPercNote(row) ) { // check second choke
+                // check for vel
+                if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
+                    cvOut.set(row, 0); // vel out
+                gate_out(row, false); // gate out
+            }
 
-                if ( chokeNotes[0] > 0 ) {
-                    for ( int8_t r = 0; r < 4 ++r ) {
-                        if ( learn.perCvState[r] && (chokeNotes[1] == learn.getPercNote(r) || chokeNotes[2] == learn.getPercNote(r)) ) {
-                            cvOut.set(row, 0);
-                        }
-                    }
-                }
-                
-                trigCounter[row] = PULSE_LENGTH_MS;
-                gate_out(row, true);
-                return;
+            // handle gate.
+            if ( note == learn.getPercNote(row) ) {
+                // check for vel
+                if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
+                    cvOut.set(row, velocity << 1); //vel out
+                gate_out(row, true); // gate out
+                break;
             }
         }
         break;
+
+        
         
         default:
         break;
