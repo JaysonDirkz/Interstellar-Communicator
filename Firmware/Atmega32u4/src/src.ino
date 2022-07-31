@@ -310,9 +310,15 @@ void clearRowData()
 
 void clearKeysActive()
 {
-    for ( int8_t addr = 0; addr < keysActiveSize; ++addr )
-    {
+    for ( int8_t addr = 0; addr < keysActiveSize; ++addr ) {
         keysActive[addr].reset();
+    }
+}
+
+void clearLastNotes()
+{
+    for ( int8_t addr = 0; addr < lastNoteSize; ++addr ) {
+        lastNote[addr].reset();
     }
 }
 
@@ -335,6 +341,7 @@ void setupLearn()
             address.fill(); // Reset all global addresses.
             clearRowData(); // Reset global rowNote data.
             clearKeysActive();
+            clearLastNotes();
 
             // reset learnCc.
             learnCc.wait_for_98 = false;
@@ -517,28 +524,21 @@ void checkPolyphony()
     }
 
     // Write boundary.
-    for ( int8_t a = 0; a < addressAmount; ++a )
-    {
-        int8_t polyAddr = learnToPolyMap[a];
+    const int8_t boundariesHigh[3][4] = { // [width][row]
+        {63, 127, 127, 127},
+        {42, 85, 127, 127},
+        {31, 63, 95, 127}
+    };   
+    int8_t outputCount = 0;
+    for ( int8_t a = 0; a < addressAmount; ++a ) {
+        int8_t polyAddr = learnToPolyMap[address.get((int8_t)learn.getType(a), learn.getChannel(a))];
+        if ( polyAddr < 0 ) continue;
         
-        if ( polyAddr > -1 )
-        {
-            int8_t row = learn.getRow(a);
-            int8_t width = polyphony.width[polyAddr];
-            
-            if ( width > 1 )
-            {
-                // [width][row]
-                const int8_t boundariesHigh[3][4] = {
-                    {63, 127, 127, 127},
-                    {42, 85, 127, 127},
-                    {31, 63, 95, 127}
-                };
-                
-                polyphony.boundary[row] = boundariesHigh[width - 2][row];
-            }
-            else polyphony.boundary[row] = 127;
-        }
+        int8_t width = polyphony.width[polyAddr];
+        if ( width > 1 ) {
+            polyphony.boundary[learn.getRow(a)] = boundariesHigh[width - 2][outputCount];
+            outputCount += 1;
+        } else polyphony.boundary[learn.getRow(a)] = 127;
     }
     
     // Clear all counters.
@@ -592,7 +592,7 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
             
             case ChannelType::Percussion:
                 learn.program(row, MessageType::PercussionVelocity, channel, row);
-                learn.setPercNote(row, channel, note);
+                learn.setPercNote(row, note);
             break;
 
             default:
@@ -716,36 +716,35 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
         }
         break;
             
-        case ChannelType::Percussion:
-        // handle choke and gate/vel output.
-        int8_t *chokeNotes = percGetChokeNotes(note);
-        for ( int8_t row = 0; row < 4; ++row ) {
-            // handle cv/gate choke: cv choke first: because of the cv slewing (ongeveer 0,5 ms).
-            if ( chokeNotes[0] == learn.getPercNote(row) ) { // check first choke
-                // check for vel
-                if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
-                    cvOut.set(row, 0); // vel out
-                gate_out(row, false); //gate out
-            } else if ( chokeNotes[1] == learn.getPercNote(row) ) { // check second choke
-                // check for vel
-                if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
-                    cvOut.set(row, 0); // vel out
-                gate_out(row, false); // gate out
-            }
-
-            // handle gate.
-            if ( note == learn.getPercNote(row) ) {
-                // check for vel
-                if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
-                    cvOut.set(row, velocity << 1); //vel out
-                gate_out(row, true); // gate out
-                break;
+        case ChannelType::Percussion: {
+            // handle choke and gate/vel output.
+            int8_t *chokeNotes = percGetChokeNotes(note);
+            for ( int8_t row = 0; row < 4; ++row ) {
+                // handle cv/gate choke: cv choke first: because of the cv slewing (ongeveer 0,5 ms).
+                if ( chokeNotes[0] == learn.getPercNote(row) ) { // check first choke
+                    // check for vel
+                    if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
+                        cvOut.set(row, 0); // vel out
+                    gate_out(row, false); //gate out
+                } else if ( chokeNotes[1] == learn.getPercNote(row) ) { // check second choke
+                    // check for vel
+                    if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
+                        cvOut.set(row, 0); // vel out
+                    gate_out(row, false); // gate out
+                }
+        
+                // handle gate.
+                if ( note == learn.getPercNote(row) ) {
+                    // check for vel
+                    if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
+                        cvOut.set(row, velocity << 1); //vel out
+                    gate_out(row, true); // gate out
+                    break;
+                }
             }
         }
         break;
 
-        
-        
         default:
         break;
     }
@@ -806,6 +805,13 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
         break;
 
         case ChannelType::Percussion:
+        for ( int8_t row = 0; row < 4; ++row ) {
+            // handle gate.
+            if ( note == learn.getPercNote(row) ) {
+                gate_out(row, false); // gate out
+                break;
+            }
+        }
         break;
 
         default:
