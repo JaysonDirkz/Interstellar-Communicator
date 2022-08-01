@@ -591,8 +591,8 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
             break;
             
             case ChannelType::Percussion:
-                learn.program(row, MessageType::PercussionVelocity, channel, row);
                 learn.setPercNote(row, note);
+                learn.setPercVel(row, true);
             break;
 
             default:
@@ -716,31 +716,23 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
         }
         break;
             
-        case ChannelType::Percussion: {
-            // handle choke and gate/vel output.
-            int8_t *chokeNotes = percGetChokeNotes(note);
-            for ( int8_t row = 0; row < 4; ++row ) {
-                // handle cv/gate choke: cv choke first: because of the cv slewing (ongeveer 0,5 ms).
-                if ( chokeNotes[0] == learn.getPercNote(row) ) { // check first choke
-                    // check for vel
-                    if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
-                        cvOut.set(row, 0); // vel out
-                    gate_out(row, false); //gate out
-                } else if ( chokeNotes[1] == learn.getPercNote(row) ) { // check second choke
-                    // check for vel
-                    if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
-                        cvOut.set(row, 0); // vel out
-                    gate_out(row, false); // gate out
+        case ChannelType::Percussion: // handle choke and current note.
+        for ( int8_t row = 0; row < 4; ++row ) {
+            // Test current note against learn.
+            if ( note == learn.getPercNote(row) ) {
+                // handle choke first.
+                int8_t *chokeNotes = percGetChokeNotes(note);
+                for ( int8_t cRow = 0; cRow < 4; ++cRow ) {
+                    if ( learn.getPercVel(cRow) && (learn.getPercNote(cRow) == chokeNotes[0] || learn.getPercNote(cRow) == chokeNotes[1]) )
+                        cvOut.set(cRow, 0); // vel out
                 }
-        
-                // handle gate.
-                if ( note == learn.getPercNote(row) ) {
-                    // check for vel
-                    if ( address.getState((int8_t)MessageType::PercussionVelocity, channel) )
-                        cvOut.set(row, velocity << 1); //vel out
-                    gate_out(row, true); // gate out
-                    break;
-                }
+
+                // handle current note
+                if ( learn.getPercVel(row) ) // check for vel
+                    cvOut.set(row, velocity << 1); //vel out
+                trigCounter[row] = PULSE_LENGTH_MS; // starts the counting.
+                gate_out(row, true); // gate out
+                break;
             }
         }
         break;
@@ -805,13 +797,13 @@ void note_off(uint8_t channel, uint8_t note, uint8_t velocity)
         break;
 
         case ChannelType::Percussion:
-        for ( int8_t row = 0; row < 4; ++row ) {
-            // handle gate.
-            if ( note == learn.getPercNote(row) ) {
-                gate_out(row, false); // gate out
-                break;
-            }
-        }
+//        for ( int8_t row = 0; row < 4; ++row ) {
+//            // handle gate.
+//            if ( note == learn.getPercNote(row) ) {
+//                gate_out(row, false); // gate out
+//                break;
+//            }
+//        }
         break;
 
         default:
@@ -1180,7 +1172,7 @@ void setAllClockOutputsLow()
 void setAtChannelAllVelocitiesLow(int8_t c) // when c == -1 all velocities low.
 {
     for ( int8_t i = 0; i < 4; ++i ) {
-        if ( (c == -1 || c == learn.getChannel(i)) && (learn.getType(i) == MessageType::KeysVelocity || learn.getType(i) == MessageType::PercussionVelocity) ) {
+        if ( (c == -1 || c == learn.getChannel(i)) && (learn.getType(i) == MessageType::KeysVelocity || learn.getPercVel(i)) ) {
             cvOut.set(i, 0);
         }
     }

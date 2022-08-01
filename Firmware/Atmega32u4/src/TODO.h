@@ -3,10 +3,9 @@ TODO:
 - Dubbelklik wisfunctie en ook uit eeprom wissen.
 
 BUGS:
- 
+
 
 TESTEN:
-- check pulselengte van percussie zonder timer met korg esx.
 - Check of percussie niet overlapt met keys als je beide programmeerd in dezelfde row.
 - ActiveKeys2 testen en test ook de wraparound als je 10 toetsten hebt ingedrukt.
 - Channelaftertouch inleren als er geen polyaftertouch is.

@@ -14,7 +14,7 @@ enum class MessageType: int8_t {
     Keys,
     KeysVelocity,
     KeysPolyPressure,
-    PercussionVelocity,
+//    PercussionVelocity,
     ChannelPressure,
     ControlChange,
     PitchBend,
@@ -66,6 +66,7 @@ class Programmer {
     MessageType types[addressAmount];
 
     int8_t percNotes[rowAmount];
+    bool percVel[rowAmount];
 
     void setType(int8_t a, MessageType t)
     {
@@ -99,12 +100,11 @@ class Programmer {
         setChannel(addr, c);
         setType(addr, t);
         setRow(addr, row);
-    
+
+        // Clear row of perc learns.
         if ( t == MessageType::Keys )
-        {
-            // Clear row of percNotes.
             setPercNote(getRow(addr), -1);
-        }
+        setPercVel(getRow(addr), false);
     }
 
     MessageType getType(int8_t a)
@@ -127,6 +127,11 @@ class Programmer {
         return percNotes[r];
     }
 
+    bool getPercVel(int8_t r)
+    {
+        return percVel[r];
+    }
+
     void setRow(int8_t a, int8_t row)
     {
         rows[a] = row;
@@ -135,6 +140,11 @@ class Programmer {
     void setPercNote(int8_t r, int8_t note)
     {
         percNotes[r] = note;
+    }
+
+    void setPercVel(int8_t r, bool state)
+    {
+        percVel[r] = state;
     }
 };
 
