@@ -325,6 +325,21 @@ void clearLastNotes()
     }
 }
 
+void check_row_delete()
+{
+    static unsigned long t_0 = 0;
+    unsigned long t_d = millis() - t_0;
+    if ( t_d < 500 ) {
+        t_0 = millis();
+
+        for ( int8_t row = 0; row < 4; ++row ) {
+            if ( (~PINF & rowTo_32u4PINF_bit[row]) > 0 ) {
+                learn.program(row); // no arguments, so empties this learn.
+            }
+        }
+    }
+}
+
 inline u8 get_bitfield_buttons()
 {
     return ~PINF & B11110000;
@@ -343,7 +358,10 @@ void setupLearn2()
         b_last = b_now;
 
         unsigned long t_delta = t_now - t_0;
-        if ( t_delta > 300 ) {
+
+        if ( t_delta > 150 ) check_row_delete();
+        
+        if ( t_delta > 250 ) {
 
             globalAddrCnt = 0; // Reset global address counter.
             address.fill(); // Reset all global addresses.
@@ -459,9 +477,12 @@ void writeGlobalAddresses()
     // Write addresses for learned types.
     for ( int8_t addr = 0; addr < addressAmount; ++addr )
     {
-        if ( learn.getRow(addr) > -1 )
-        {
-            address.set((int8_t)learn.getType(addr), learn.getChannel(addr), addr);
+        int8_t row = learn.getRow(addr);
+        int8_t type = (int8_t)learn.getType(addr);
+        int8_t channel = learn.getChannel(addr);
+        
+        if ( row > -1 && type > -1 && channel > -1 ) {
+            address.set(type, channel, addr);
         }
     }
 }

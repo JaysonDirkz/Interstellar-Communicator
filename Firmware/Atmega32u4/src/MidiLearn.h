@@ -76,7 +76,7 @@ class Programmer {
         }
     }
 
-    void program(int8_t addr, MessageType t, int8_t c, int8_t row)
+    void program(int8_t addr, MessageType t = MessageType::Size, int8_t c = -1, int8_t row = -1)
     {
         // Write
         setChannel(addr, c);
@@ -84,7 +84,7 @@ class Programmer {
         setRow(addr, row);
 
         // Clear row of perc learns.
-        if ( t == MessageType::Keys )
+        if ( t == MessageType::Keys || t == MessageType::Size )
             setPercNote(getRow(addr), -1);
         setPercVel(getRow(addr), false);
     }

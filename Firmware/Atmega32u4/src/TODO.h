@@ -1,11 +1,13 @@
 /*
 TODO:
-- Dubbelklik wisfunctie en ook uit eeprom wissen.
+- CC relative misschien niet heel kanaal 12. Andere manier?
 
 BUGS:
 
 
 TESTEN:
+- nieuwe learn.
+- dubbelklik wisfunctie.
 - Check of percussie niet overlapt met keys als je beide programmeerd in dezelfde row.
 - ActiveKeys2 testen en test ook de wraparound als je 10 toetsten hebt ingedrukt.
 - Channelaftertouch inleren als er geen polyaftertouch is.
