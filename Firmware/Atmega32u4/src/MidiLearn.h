@@ -1,15 +1,6 @@
 #ifndef MidiLearn_h
 #define MidiLearn_h
 
-//enum class Type: int8_t {
-//    None, // Te veel ram? Deze kan weg. Gebruik "Size".
-//    Keys,// Te veel ram? Deze kan weg. Gebruik None of Size van KeyType class.
-//    ChannelPressure,
-//    ControlChange,
-//    PitchBend,
-//    Size
-//};
-
 enum class MessageType: int8_t {
     Keys,
     KeysVelocity,
@@ -21,21 +12,12 @@ enum class MessageType: int8_t {
     Size
 };
 
-//enum class KeyType: int8_t {
-//    PercussionVelocity,
-//    KeysPitch,
-//    KeysVelocity,
-//    KeysPolyPressure,
-//    Size
-//};
-
 enum class ChannelType: int8_t {
     Keys,
     Percussion,
     Size
 };
 
-// class Channels : public ChannelTypes {
 class Channels {
     private:
     ChannelType channelTypes[16];
@@ -187,79 +169,5 @@ class Polyphony {
         }
     }
 };
-
-// enum Type {
-//         Keys,
-//         KeysVelocity,
-//         KeysPolyPressure,
-//         Percussion,
-//         PercussionVelocity,
-//         ChannelPressure,
-//         ControlChange,
-//         PitchBend
-//     };
-
-// union MidiConstruct {
-//     struct KeyConstruct {
-//         int8_t channel = 0;
-
-//         enum {
-//             keys,
-//             keysVelocity,
-//             keysPolyPressure,
-//             channelPressure,
-//             pitchBend
-//         } type = keys;
-        
-//         union {
-//             bool mono = true;
-//             int8_t polyphonic = 0;
-//             int8_t keysplit = 0;
-//         } polyType.mono = true;
-//     };
-
-//     struct PercussionConstruct {
-//         int8_t channel = 0;
-
-//         enum {
-//             percussion,
-//             percussionVelocity,
-//         } type = percussion;
-        
-//         enum {
-//             none,
-//             dual,
-//             all
-//         } choke;
-//     };
-
-//     struct ControlChangeConstruct {
-//         int8_t channel = 0;
-
-//         union Type {
-//             struct {
-//                 int8_t number = 0;
-//             } basic;
-
-//             struct {
-//                 int8_t msb = 0;
-//                 int8_t lsb = 32;
-//             } hires;
-
-//             struct {
-//                 int8_t msb = 0;
-//                 bool nrpn_98 = false;
-//                 bool nrpn_99 = false;
-//             } basicNrpn;
-
-//             struct {
-//                 int8_t msb = 0;
-//                 int8_t lsb = 32;
-//                 bool nrpn_98 = false;
-//                 bool nrpn_99 = false;
-//             } hiresNrpn;
-//         };
-//     };
-// };
 
 #endif

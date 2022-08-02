@@ -40,6 +40,9 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 // Terminal count
 #define PWM6_13_MAX OCR4C
 
+typedef int8_t i8;
+typedef uint8_t u8;
+
 struct CvOut {
     uint8_t values[4] = {0, 0, 0, 0};
 
@@ -255,7 +258,7 @@ void loop()
 {
 	MIDI.read();
     controlThread();
-    setupLearn();
+    setupLearn2();
 
     if ( activeSensing_getTimeout(700) ) activeSensing_onTimeout();
 }
@@ -319,6 +322,73 @@ void clearLastNotes()
 {
     for ( int8_t addr = 0; addr < lastNoteSize; ++addr ) {
         lastNote[addr].reset();
+    }
+}
+
+inline u8 get_bitfield_buttons()
+{
+    return ~PINF & B11110000;
+}
+
+void setupLearn2()
+{
+    // Check buttons.
+    auto b_now = get_bitfield_buttons();
+    if ( b_now ) {
+        static unsigned long t_0 = 0;
+        unsigned long t_now = millis();
+
+        static u8 b_last = 0;
+        if ( b_now != b_last ) t_0 = t_now;
+        b_last = b_now;
+
+        unsigned long t_delta = t_now - t_0;
+        if ( t_delta > 300 ) {
+
+            globalAddrCnt = 0; // Reset global address counter.
+            address.fill(); // Reset all global addresses.
+            clearRowData(); // Reset global rowNote data.
+            clearKeysActive();
+            clearLastNotes();
+
+            // reset learnCc.
+            learnCc.wait_for_98 = false;
+            learnCc.wait_for_6 = false;
+            learnCc.wait_for_lsb = false;
+            learnCc.nrpn = 16383;
+            
+            MIDI.setHandleNoteOn(learn_note);
+            MIDI.disconnectCallbackFromType(midi::NoteOff);
+            MIDI.setHandleControlChange(learn_control_change);
+            MIDI.setHandlePitchBend(learn_pitchbend);
+            MIDI.setHandleAfterTouchChannel(learn_atc);
+            MIDI.setHandleAfterTouchPoly(learn_atp);
+            MIDI.disconnectCallbackFromType(midi::Clock);
+            MIDI.disconnectCallbackFromType(midi::Start);
+            MIDI.disconnectCallbackFromType(midi::Continue);
+            MIDI.disconnectCallbackFromType(midi::Stop);
+            
+            do {
+                MIDI.read();
+            } while ( get_bitfield_buttons() );
+
+            writeGlobalAddresses();
+            writeKeyAftertouchMapping();
+            writePolyAddresses();
+            checkPolyphony();
+            save_learn_status();
+
+            MIDI.setHandleNoteOn(note_on);
+            MIDI.setHandleNoteOff(note_off);
+            MIDI.setHandleControlChange(control_change);
+            MIDI.setHandlePitchBend(pitchbend);
+            MIDI.setHandleAfterTouchChannel(atc);
+            MIDI.setHandleAfterTouchPoly(atp);
+            MIDI.setHandleClock(clock_tick);
+            MIDI.setHandleStart(clock_start);
+            MIDI.setHandleContinue(clock_continue);
+            MIDI.setHandleStop(clock_stop);
+        }
     }
 }
 
