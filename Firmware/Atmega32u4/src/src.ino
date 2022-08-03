@@ -1,12 +1,14 @@
 #include <MIDI.h>
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-//#define DEBUG
-#undef DEBUG
+#define DEBUG
+//#undef DEBUG
 #include "debug.h"
 #include "ActiveSensing.h"
 
-#include "Utility.h"
+#include "Delta.h"
+#include "Array.h"
+#include "TwoDimensionalLookup.h"
 #include "MidiLearn.h"
 #include "MidiUtility.h"
 
@@ -224,41 +226,44 @@ void configuremidisethandle()
 
 void load_learn_status()
 {
-    uint16_t a = 0; // eeprom address.
-    EEPROM.get(a, learn); a += sizeof(learn);
-    EEPROM.get(a, address); a += sizeof(address);
-    EEPROM.get(a, polyphony); a += sizeof(polyphony);
-    
-    for ( int8_t i = 0; i < 4; ++i ) {
-        EEPROM.get(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
-        EEPROM.get(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
-        EEPROM.get(a, cc[i]); a += sizeof(cc[i]);
-    }
-
-    DEBUG_LOAD_EEPROM
+//    uint16_t a = 0; // eeprom address.
+//    EEPROM.get(a, learn); a += sizeof(learn);
+//    EEPROM.get(a, address); a += sizeof(address);
+//    EEPROM.get(a, polyphony); a += sizeof(polyphony);
+//    
+//    for ( int8_t i = 0; i < 4; ++i ) {
+//        EEPROM.get(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
+//        EEPROM.get(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
+//        EEPROM.get(a, cc[i]); a += sizeof(cc[i]);
+//    }
+//
+//    DEBUG_LOAD_EEPROM
 }
 
 void save_learn_status()
 {
-    uint16_t a = 0; // eeprom address.
-    EEPROM.put(a, learn); a += sizeof(learn);
-    EEPROM.put(a, address); a += sizeof(address);
-    EEPROM.put(a, polyphony); a += sizeof(polyphony);
-    
-    for ( int8_t i = 0; i < 4; ++i ) {
-        EEPROM.put(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
-        EEPROM.put(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
-        EEPROM.put(a, cc[i]); a += sizeof(cc[i]);
-    }
-
-    DEBUG_SAVE_EEPROM
+//    uint16_t a = 0; // eeprom address.
+//    EEPROM.put(a, learn); a += sizeof(learn);
+//    EEPROM.put(a, address); a += sizeof(address);
+//    EEPROM.put(a, polyphony); a += sizeof(polyphony);
+//    
+//    for ( int8_t i = 0; i < 4; ++i ) {
+//        EEPROM.put(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
+//        EEPROM.put(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
+//        EEPROM.put(a, cc[i]); a += sizeof(cc[i]);
+//    }
+//
+//    DEBUG_OUT_FAST("EEPROM learn", a);
 }
 
 void loop()
 {
-	MIDI.read();
+	if ( ! MIDI.read() ) {
+        task_learnDelete();
+        task_learn();
+	}
+   
     controlThread();
-    setupLearn2();
 
     if ( activeSensing_getTimeout(700) ) activeSensing_onTimeout();
 }
@@ -325,92 +330,118 @@ void clearLastNotes()
     }
 }
 
-void check_row_delete()
-{
-    static unsigned long t_0 = 0;
-    unsigned long t_d = millis() - t_0;
-    if ( t_d < 500 ) {
-        t_0 = millis();
-
-        for ( int8_t row = 0; row < 4; ++row ) {
-            if ( (~PINF & rowTo_32u4PINF_bit[row]) > 0 ) {
-                learn.program(row); // no arguments, so empties this learn.
-            }
-        }
-    }
-}
-
 inline u8 get_bitfield_buttons()
 {
     return ~PINF & B11110000;
 }
 
-void setupLearn2()
+void task_learnDelete()
 {
-    // Check buttons.
-    auto b_now = get_bitfield_buttons();
-    if ( b_now ) {
-        static unsigned long t_0 = 0;
-        unsigned long t_now = millis();
+    static unsigned long t_0 = 0;
+    static unsigned long b_t_0 = 0;
+    static Delta <bool, int8_t> b_delta;
+    static int8_t count = 0;
 
-        static u8 b_last = 0;
-        if ( b_now != b_last ) t_0 = t_now;
-        b_last = b_now;
+    unsigned long t_now = millis();
+    uint8_t b_now = get_bitfield_buttons();
+    
+    if ( b_now == 0 ) b_t_0 = t_now; // resets button timer when button is up.
 
-        unsigned long t_delta = t_now - t_0;
+    // button hold timer:
+    unsigned long b_t_delta = t_now - b_t_0; // time counted from reset.
+    if ( b_delta(b_t_delta >= 50) > 0 ) { // on moment that time exceeds 50 ms.
+        t_0 = t_now; // reset timer that resets count;
+        ++count; // increment count
 
-        if ( t_delta > 150 ) check_row_delete();
+        DEBUG_OUT_FAST("learnDel_del", b_t_delta);
+    }
+
+    // button counter.
+    unsigned long t_delta = t_now - t_0; // time since last button push.
+    if ( t_delta >= 300 ) count = 0; // reset count 500 ms after last button push.
+    else if ( count == 2 ) { // if button is triggered 2 times under 500 ms.
+        count = 0;
         
-        if ( t_delta > 250 ) {
+        for ( int8_t row = 0; row < 4; ++row ) {
+            if ( (b_now & rowTo_32u4PINF_bit[row]) > 0 ) {
+                learn_start();
+                learn.program(row); // only first arg, so empties this learn.
+                learn_finish();
 
-            globalAddrCnt = 0; // Reset global address counter.
-            address.fill(); // Reset all global addresses.
-            clearRowData(); // Reset global rowNote data.
-            clearKeysActive();
-            clearLastNotes();
-
-            // reset learnCc.
-            learnCc.wait_for_98 = false;
-            learnCc.wait_for_6 = false;
-            learnCc.wait_for_lsb = false;
-            learnCc.nrpn = 16383;
-            
-            MIDI.setHandleNoteOn(learn_note);
-            MIDI.disconnectCallbackFromType(midi::NoteOff);
-            MIDI.setHandleControlChange(learn_control_change);
-            MIDI.setHandlePitchBend(learn_pitchbend);
-            MIDI.setHandleAfterTouchChannel(learn_atc);
-            MIDI.setHandleAfterTouchPoly(learn_atp);
-            MIDI.disconnectCallbackFromType(midi::Clock);
-            MIDI.disconnectCallbackFromType(midi::Start);
-            MIDI.disconnectCallbackFromType(midi::Continue);
-            MIDI.disconnectCallbackFromType(midi::Stop);
-            
-            do {
-                MIDI.read();
-            } while ( get_bitfield_buttons() );
-
-            writeGlobalAddresses();
-            writeKeyAftertouchMapping();
-            writePolyAddresses();
-            checkPolyphony();
-            save_learn_status();
-
-            MIDI.setHandleNoteOn(note_on);
-            MIDI.setHandleNoteOff(note_off);
-            MIDI.setHandleControlChange(control_change);
-            MIDI.setHandlePitchBend(pitchbend);
-            MIDI.setHandleAfterTouchChannel(atc);
-            MIDI.setHandleAfterTouchPoly(atp);
-            MIDI.setHandleClock(clock_tick);
-            MIDI.setHandleStart(clock_start);
-            MIDI.setHandleContinue(clock_continue);
-            MIDI.setHandleStop(clock_stop);
+                DEBUG_OUT_FAST("learnDel_end", learn.getPercNote(row));
+                break;
+            }
         }
     }
 }
 
-void setupLearn()
+void task_learn()
+{
+    static unsigned long b_t_0 = 0;
+    static Delta <bool, int8_t> b_delta;
+
+    unsigned long t_now = millis();
+    uint8_t b_now = get_bitfield_buttons();
+    
+    if ( b_now == 0 ) b_t_0 = t_now; // resets button timer when button is up.
+
+    // button hold timer:
+    unsigned long b_t_delta = t_now - b_t_0; // time counted from reset.
+    if ( b_delta(b_t_delta >= 200) > 0 ) { // on moment that time exceeds 250 ms.
+        learn_start();
+        do { MIDI.read();
+        } while ( get_bitfield_buttons() );
+        learn_finish();
+    }
+}
+
+void learn_start()
+{
+    globalAddrCnt = 0; // Reset global address counter.
+    address.fill(); // Reset all global addresses.
+    clearRowData(); // Reset global rowNote data.
+    clearKeysActive();
+    clearLastNotes();
+
+    // reset learnCc.
+    learnCc.wait_for_98 = false;
+    learnCc.wait_for_6 = false;
+    learnCc.wait_for_lsb = false;
+    learnCc.nrpn = 16383;
+    
+    MIDI.setHandleNoteOn(learn_note);
+    MIDI.disconnectCallbackFromType(midi::NoteOff);
+    MIDI.setHandleControlChange(learn_control_change);
+    MIDI.setHandlePitchBend(learn_pitchbend);
+    MIDI.setHandleAfterTouchChannel(learn_atc);
+    MIDI.setHandleAfterTouchPoly(learn_atp);
+    MIDI.disconnectCallbackFromType(midi::Clock);
+    MIDI.disconnectCallbackFromType(midi::Start);
+    MIDI.disconnectCallbackFromType(midi::Continue);
+    MIDI.disconnectCallbackFromType(midi::Stop);
+}
+
+void learn_finish()
+{
+    writeGlobalAddresses();
+    writeKeyAftertouchMapping();
+    writePolyAddresses();
+    checkPolyphony();
+    save_learn_status();
+
+    MIDI.setHandleNoteOn(note_on);
+    MIDI.setHandleNoteOff(note_off);
+    MIDI.setHandleControlChange(control_change);
+    MIDI.setHandlePitchBend(pitchbend);
+    MIDI.setHandleAfterTouchChannel(atc);
+    MIDI.setHandleAfterTouchPoly(atp);
+    MIDI.setHandleClock(clock_tick);
+    MIDI.setHandleStart(clock_start);
+    MIDI.setHandleContinue(clock_continue);
+    MIDI.setHandleStop(clock_stop);
+}
+
+void task_Learn_old()
 {
     for ( int8_t row = 0; row < 4; ++row )
     {
@@ -425,49 +456,13 @@ void setupLearn()
         {
             delay(200); // against hysterisis
 
-            globalAddrCnt = 0; // Reset global address counter.
-            address.fill(); // Reset all global addresses.
-            clearRowData(); // Reset global rowNote data.
-            clearKeysActive();
-            clearLastNotes();
-
-            // reset learnCc.
-            learnCc.wait_for_98 = false;
-            learnCc.wait_for_6 = false;
-            learnCc.wait_for_lsb = false;
-            learnCc.nrpn = 16383;
-            
-            MIDI.setHandleNoteOn(learn_note);
-            MIDI.disconnectCallbackFromType(midi::NoteOff);
-            MIDI.setHandleControlChange(learn_control_change);
-            MIDI.setHandlePitchBend(learn_pitchbend);
-            MIDI.setHandleAfterTouchChannel(learn_atc);
-            MIDI.setHandleAfterTouchPoly(learn_atp);
-            MIDI.disconnectCallbackFromType(midi::Clock);
-            MIDI.disconnectCallbackFromType(midi::Start);
-            MIDI.disconnectCallbackFromType(midi::Continue);
-            MIDI.disconnectCallbackFromType(midi::Stop);
+            learn_start();
         }
         else if ( deltaButtonState < 0 )
         {
-            writeGlobalAddresses();
-            writeKeyAftertouchMapping();
-            writePolyAddresses();
-            checkPolyphony();
-            save_learn_status();
-            
             delay(200); // against hysterisis
 
-            MIDI.setHandleNoteOn(note_on);
-            MIDI.setHandleNoteOff(note_off);
-            MIDI.setHandleControlChange(control_change);
-            MIDI.setHandlePitchBend(pitchbend);
-            MIDI.setHandleAfterTouchChannel(atc);
-            MIDI.setHandleAfterTouchPoly(atp);
-            MIDI.setHandleClock(clock_tick);
-            MIDI.setHandleStart(clock_start);
-            MIDI.setHandleContinue(clock_continue);
-            MIDI.setHandleStop(clock_stop);
+            learn_finish();
         }
     }
 }
@@ -816,6 +811,7 @@ void note_on(uint8_t channel, uint8_t note, uint8_t velocity) //Moeten bytes zij
                 for ( int8_t cRow = 0; cRow < 4; ++cRow ) {
                     if ( learn.getPercVel(cRow) && (learn.getPercNote(cRow) == chokeNotes[0] || learn.getPercNote(cRow) == chokeNotes[1]) )
                         cvOut.set(cRow, 0); // vel out
+//                    DEBUG_OUT_FAST("percVel", learn.getPercVel(cRow));
                 }
 
                 // handle current note

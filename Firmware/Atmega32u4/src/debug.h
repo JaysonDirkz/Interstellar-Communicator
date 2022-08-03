@@ -1,48 +1,60 @@
 #ifdef DEBUG
 
+#define DEBUG_OUT_FAST(text, dec) \
+    char debugText[] = text; \
+    char debugNum[20]; \
+    itoa(dec, debugNum, 10); \
+    MIDI.sendSysEx(sizeof(debugText), (uint8_t *)debugText); \
+    MIDI.sendSysEx(sizeof(debugNum), (uint8_t *)debugNum);
+
+#define DEBUG_OUT(text, arg) \
+    char debug[] = text; \
+    sprintf(debug, debug, arg); \
+    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
+
 #define DEBUG_LOAD_EEPROM \
     char debug[] = "Load eeprom values size: %d."; \
     sprintf(debug, debug, a); \
-    MIDI.sendSysEx(sizeof(debug), debug);
+    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
 #define DEBUG_SAVE_EEPROM \
     char debug[] = "Save eeprom values size: %d."; \
     sprintf(debug, debug, a); \
-    MIDI.sendSysEx(sizeof(debug), debug);
+    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
 #define DEBUG_ACTIVE_TIMEOUT \
     char debug[] = "ActiveSensing timeout.";\
     sprintf(debug, debug);\
-    MIDI.sendSysEx(sizeof(debug), debug);
+    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
 #define DEBUG_CV_OUT \
     char debug[] = "cv output: %d, %d.";\
     sprintf(debug, debug, row, value);\
-    MIDI.sendSysEx(sizeof(debug), debug);
+    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
 #define DEBUG_GATE_OUT \
     char debug[] = "gate output: %d, %d.";\
     sprintf(debug, debug, row, state);\
-    MIDI.sendSysEx(sizeof(debug), debug);
+    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
-#define DEBUG_ACTIVEKEYS_ON \
-//    char debug[] = \
+#define DEBUG_ACTIVEKEYS_ON //\
+    char debug[] = \
         "ActiveKey On key: %d, pos: %d, amnt: %d, writePtr %d, readPtr %d";\
     sprintf(debug, debug, \
         key, position, amount, waitingPositionsReadPtr, waitingPositionsReadPtr \
     ); \
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
-#define DEBUG_ACTIVEKEYS_OFF \
-//    char debug[] = \
+#define DEBUG_ACTIVEKEYS_OFF //\
+    char debug[] = \
         "ActiveKey Off key: %d, pos: %d, amnt: %d, writePtr %d, readPtr %d";\
     sprintf(debug, debug, \
         key, position, amount, waitingPositionsReadPtr, waitingPositionsReadPtr \
     ); \
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
-#define DEBUG_LASTNOTE_ON \
-//    int8_t *h = historicNotes;\
+#define DEBUG_LASTNOTE_ON //\
+    int8_t *h = historicNotes;\
     int8_t *f = futureNotes;\
     char debug[] = \
         "LastNote On  in %d, out %d, state %d, \
@@ -54,8 +66,8 @@
     ); \
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
-#define DEBUG_LASTNOTE_OFF \
-//    char debug[] = "LastNote Off  in %d, out %d, state %d.";\
+#define DEBUG_LASTNOTE_OFF //\
+    char debug[] = "LastNote Off  in %d, out %d, state %d.";\
     sprintf(debug, debug, noteIn, noteOut, stateOut);\
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
     

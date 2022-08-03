@@ -73,6 +73,9 @@ class Programmer {
         for( int8_t r = 0; r < rowAmount; ++r )
         {
             percNotes[r] = -1;
+            percVel[r] = false;
+
+            DEBUG_OUT_FAST("percVellearn_1", getPercVel(r));
         }
     }
 
@@ -85,31 +88,31 @@ class Programmer {
 
         // Clear row of perc learns.
         if ( t == MessageType::Keys || t == MessageType::Size )
-            setPercNote(getRow(addr), -1);
-        setPercVel(getRow(addr), false);
+            setPercNote(addr, -1);
+        setPercVel(addr, false);
     }
 
-    MessageType getType(int8_t a)
+    inline MessageType getType(int8_t a)
     {
         return types[a];
     }
 
-    int8_t getChannel(int8_t a)
+    inline int8_t getChannel(int8_t a)
     {
         return channels[a];
     }
 
-    int8_t getRow(int8_t a)
+    inline int8_t getRow(int8_t a)
     {
         return rows[a];
     }
     
-    int8_t getPercNote(int8_t r)
+    inline int8_t getPercNote(int8_t r)
     {
         return percNotes[r];
     }
 
-    bool getPercVel(int8_t r)
+    inline bool getPercVel(int8_t r)
     {
         return percVel[r];
     }
@@ -127,6 +130,7 @@ class Programmer {
     void setPercVel(int8_t r, bool state)
     {
         percVel[r] = state;
+        DEBUG_OUT_FAST("percVellearn", getPercVel(r));
     }
 };
 
