@@ -103,6 +103,12 @@ lastNote_t lastNote[lastNoteSize];
 
 int8_t rowNote[4] = {-1, -1, -1, -1};
 
+enum CcMode {
+    Absolute,
+    Rel_inc1_dec127, // 1 t/m 63 increment, 127 t/m 65 decrement.
+    Rel_inc65_dec63 // 63 tot 1 decrement, 65 tot 127 increment.
+};
+
 struct LearnCc {
     bool wait_for_98 = false;
     bool wait_for_6 = false;
