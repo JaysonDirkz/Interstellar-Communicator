@@ -65,8 +65,10 @@ struct CvOut {
             case 3: PWM13 = value; break;
             default: break;
         }
-        
-        DEBUG_CV_OUT
+
+//        DEBUG_OUT_FAST("cv row: xxx", 3, row);
+//        DEBUG_OUT_FAST("cv val: xxx", 3, value);
+        DEBUG_OUT_SUPERFAST(Debug::Cv, row, value);
     }
 } cvOut;
 
@@ -76,7 +78,7 @@ Channels channels;
 
 const int8_t addressAmount = 4;
 const int8_t rowAmount = 4;
-typedef Programmer <addressAmount, rowAmount> learn_t;
+typedef Programmer <addressAmount> learn_t;
 learn_t learn; //Saved in eeprom
 
 typedef TwoDimensionalLookup <(int8_t)MessageType::Size, 16> address_t;
@@ -125,6 +127,26 @@ pressure_t pressures[pressuresSize]{0, 0};
 
 // 5 als minimum want midi clock pulse lengte bij 360 bpm is 60000 / 360*24 = 6,94 ms
 const uint8_t PULSE_LENGTH_MS = 5;
+
+unsigned long eeprom_getCalculatedCrcChecksum()
+{
+  const unsigned long crc_table[16] = {
+    0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+    0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+    0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+    0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
+  };
+
+  unsigned long crc = ~0L;
+
+  for ( uint16_t index = 0 ; index < (EEPROM.length() - sizeof(crc)) ; ++index) {
+    crc = crc_table[(crc ^ EEPROM[index]) & 0x0f] ^ (crc >> 4);
+    crc = crc_table[(crc ^ (EEPROM[index] >> 4)) & 0x0f] ^ (crc >> 4);
+    crc = ~crc;
+  }
+
+  return crc;
+}
 
 void setup()
 {
@@ -221,51 +243,66 @@ void configuremidisethandle()
 	MIDI.setHandleStart(clock_start);
 	MIDI.setHandleContinue(clock_continue);
 	MIDI.setHandleStop(clock_stop);
-    MIDI.setHandleActiveSensing(active_sensing);
 }
 
 void load_learn_status()
 {
-//    uint16_t a = 0; // eeprom address.
-//    EEPROM.get(a, learn); a += sizeof(learn);
-//    EEPROM.get(a, address); a += sizeof(address);
-//    EEPROM.get(a, polyphony); a += sizeof(polyphony);
-//    
-//    for ( int8_t i = 0; i < 4; ++i ) {
-//        EEPROM.get(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
-//        EEPROM.get(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
-//        EEPROM.get(a, cc[i]); a += sizeof(cc[i]);
-//    }
-//
-//    DEBUG_LOAD_EEPROM
+    unsigned long calculatedCrcChecksum = eeprom_getCalculatedCrcChecksum();
+    unsigned long savedCrcChecksum;
+    EEPROM.get(EEPROM.length() - sizeof(calculatedCrcChecksum), savedCrcChecksum);
+    
+    if ( calculatedCrcChecksum == savedCrcChecksum ) {
+        uint16_t a = 0; // eeprom address.
+        EEPROM.get(a, learn); a += sizeof(learn);
+        EEPROM.get(a, address); a += sizeof(address);
+        EEPROM.get(a, polyphony); a += sizeof(polyphony);
+        
+        for ( int8_t i = 0; i < 4; ++i ) {
+            EEPROM.get(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
+            EEPROM.get(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
+            EEPROM.get(a, cc[i]); a += sizeof(cc[i]);
+        }
+    
+        DEBUG_OUT_FAST("eeprom read, size: xxxxxx", 6, a);
+    } else {
+        DEBUG_OUT_FAST("crc not equal, calc: xxxxxxxxxx", 10, calculatedCrcChecksum);
+        DEBUG_OUT_FAST("crc not equal, saved: xxxxxxxxxx", 10, savedCrcChecksum);
+    }
 }
 
 void save_learn_status()
 {
-//    uint16_t a = 0; // eeprom address.
-//    EEPROM.put(a, learn); a += sizeof(learn);
-//    EEPROM.put(a, address); a += sizeof(address);
-//    EEPROM.put(a, polyphony); a += sizeof(polyphony);
-//    
-//    for ( int8_t i = 0; i < 4; ++i ) {
-//        EEPROM.put(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
-//        EEPROM.put(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
-//        EEPROM.put(a, cc[i]); a += sizeof(cc[i]);
-//    }
-//
-//    DEBUG_OUT_FAST("EEPROM learn", a);
+    uint16_t a = 0; // eeprom address.
+    EEPROM.put(a, learn); a += sizeof(learn);
+    EEPROM.put(a, address); a += sizeof(address);
+    EEPROM.put(a, polyphony); a += sizeof(polyphony);
+    
+    for ( int8_t i = 0; i < 4; ++i ) {
+        EEPROM.put(a, learnToPolyMap[i]); a += sizeof(learnToPolyMap[i]);
+        EEPROM.put(a, learnToPressureMap[i]); a += sizeof(learnToPressureMap[i]);
+        EEPROM.put(a, cc[i]); a += sizeof(cc[i]);
+    }
+
+    DEBUG_OUT_FAST("eeprom saved, size: xxxxxx", 6, a);
+
+    unsigned long calculatedCrcChecksum = eeprom_getCalculatedCrcChecksum();
+    EEPROM.put(EEPROM.length() - sizeof(calculatedCrcChecksum), calculatedCrcChecksum);
 }
 
 void loop()
 {
-	if ( ! MIDI.read() ) {
+	if ( MIDI.read() ) {
+        activeSensing_update();
+	} else {
         task_learnDelete();
         task_learn();
 	}
    
     controlThread();
 
-    if ( activeSensing_getTimeout(700) ) activeSensing_onTimeout();
+    static Delta <bool, int8_t> act_delta;
+    if ( act_delta(activeSensing_getTimeout(550)) > 0 ) activeSensing_onTimeout();
+//    if ( activeSensing_getTimeout(500) ) activeSensing_onTimeout();
 }
 
 int8_t clockCounter = -1;
@@ -353,7 +390,7 @@ void task_learnDelete()
         t_0 = t_now; // reset timer that resets count;
         ++count; // increment count
 
-        DEBUG_OUT_FAST("learnDel_del", b_t_delta);
+//        DEBUG_OUT_FAST("learn deleted", b_t_delta);
     }
 
     // button counter.
@@ -368,7 +405,7 @@ void task_learnDelete()
                 learn.program(row); // only first arg, so empties this learn.
                 learn_finish();
 
-                DEBUG_OUT_FAST("learnDel_end", learn.getPercNote(row));
+                DEBUG_OUT_FAST("learn deleted row: x", 1, learn.getPercNote(row));
                 break;
             }
         }
@@ -383,14 +420,17 @@ void task_learn()
     unsigned long t_now = millis();
     uint8_t b_now = get_bitfield_buttons();
     
-    if ( b_now == 0 ) b_t_0 = t_now; // resets button timer when button is up.
+    if ( b_now == 0 ) b_t_0 = t_now; // resets button timer when any button is up.
 
     // button hold timer:
     unsigned long b_t_delta = t_now - b_t_0; // time counted from reset.
-    if ( b_delta(b_t_delta >= 200) > 0 ) { // on moment that time exceeds 250 ms.
+    int8_t b_deltaOut = b_delta(b_t_delta >= 200);
+    if ( b_deltaOut > 0 ) { // on moment that time exceeds 200 ms.
         learn_start();
-        do { MIDI.read();
-        } while ( get_bitfield_buttons() );
+//        do { MIDI.read();
+//        } while ( get_bitfield_buttons() );
+//        learn_finish();
+    } else if ( b_deltaOut < 0 ) { // all buttons released.
         learn_finish();
     }
 }
@@ -415,10 +455,6 @@ void learn_start()
     MIDI.setHandlePitchBend(learn_pitchbend);
     MIDI.setHandleAfterTouchChannel(learn_atc);
     MIDI.setHandleAfterTouchPoly(learn_atp);
-    MIDI.disconnectCallbackFromType(midi::Clock);
-    MIDI.disconnectCallbackFromType(midi::Start);
-    MIDI.disconnectCallbackFromType(midi::Continue);
-    MIDI.disconnectCallbackFromType(midi::Stop);
 }
 
 void learn_finish()
@@ -435,36 +471,6 @@ void learn_finish()
     MIDI.setHandlePitchBend(pitchbend);
     MIDI.setHandleAfterTouchChannel(atc);
     MIDI.setHandleAfterTouchPoly(atp);
-    MIDI.setHandleClock(clock_tick);
-    MIDI.setHandleStart(clock_start);
-    MIDI.setHandleContinue(clock_continue);
-    MIDI.setHandleStop(clock_stop);
-}
-
-void task_Learn_old()
-{
-    for ( int8_t row = 0; row < 4; ++row )
-    {
-        bool buttonStates[4];
-        static bool lastButtonStates[4] = {0, 0, 0, 0};
-
-        buttonStates[row] = ~PINF & rowTo_32u4PINF_bit[row];
-        int8_t deltaButtonState = buttonStates[row] - lastButtonStates[row];
-        lastButtonStates[row] = buttonStates[row];
-        
-        if ( deltaButtonState > 0 )
-        {
-            delay(200); // against hysterisis
-
-            learn_start();
-        }
-        else if ( deltaButtonState < 0 )
-        {
-            delay(200); // against hysterisis
-
-            learn_finish();
-        }
-    }
 }
 
 void writeGlobalAddresses()
@@ -677,8 +683,7 @@ void learn_note(uint8_t channel, uint8_t note, uint8_t velocity)
             break;
             
             case ChannelType::Percussion:
-                learn.setPercNote(row, note);
-                learn.setPercVel(row, true);
+                learn.setPerc(row, note, true);
             break;
 
             default:
@@ -1191,14 +1196,16 @@ void gate_out(int8_t row, bool state)
 	const int8_t GATES[4] = {GATE_1_PIN, GATE_2_PIN, GATE_3_PIN, GATE_4_PIN};
 	digitalWrite(GATES[row], state);
 
-    DEBUG_GATE_OUT
+//    DEBUG_OUT_FAST("gate row: xxx", 3, row);
+//    DEBUG_OUT_FAST("gate val: xxx", 3, state);
+    DEBUG_OUT_SUPERFAST(Debug::Gate, row, state);
 }
 
 void clock_tick()
 {
     digitalWrite(CLOCK_PIN, HIGH);
     clockCounter = PULSE_LENGTH_MS;
-    activeSensing_update();
+//    activeSensing_update();
 }
 
 void clock_start()
@@ -1217,18 +1224,13 @@ void clock_stop()
     setAtChannelAllGatesLow(-1);
 }
 
-void active_sensing()
-{
-    activeSensing_update();
-}
-
 void activeSensing_onTimeout()
 {
     setAllClockOutputsLow();
     setAtChannelAllGatesLow(-1);
     setAtChannelAllNotesOff(-1);
 
-    DEBUG_ACTIVE_TIMEOUT
+    DEBUG_OUT("midi timeout");
 }
 
 void setAtChannelAllNotesOff(int8_t c) // when c == -1 all notes off.

@@ -39,7 +39,7 @@ class Channels {
     }
 };
 
-template <int8_t addressAmount, int8_t rowAmount>
+template <int8_t addressAmount>
 class Programmer {
     private:
     // Wordt enkel uitgelezen in learn polyphony fase. Met een loop.
@@ -47,18 +47,18 @@ class Programmer {
     int8_t channels[addressAmount];
     MessageType types[addressAmount];
 
-    int8_t percNotes[rowAmount];
-    bool percVel[rowAmount];
+    int8_t percNotes[addressAmount];
+    bool percVel[addressAmount];
 
-    void setType(int8_t a, MessageType t)
-    {
-        types[a] = t;
-    }
-    
-    void setChannel(int8_t a, int8_t c)
-    {
-        channels[a] = c;
-    }
+//    void setType(int8_t a, MessageType t)
+//    {
+//        types[a] = t;
+//    }
+//    
+//    void setChannel(int8_t a, int8_t c)
+//    {
+//        channels[a] = c;
+//    }
     
     public:
     Programmer()
@@ -70,26 +70,26 @@ class Programmer {
             types[a] = MessageType::Size;
         }
 
-        for( int8_t r = 0; r < rowAmount; ++r )
+        for( int8_t a = 0; a < addressAmount; ++a )
         {
-            percNotes[r] = -1;
-            percVel[r] = false;
+            percNotes[a] = -1;
+            percVel[a] = false;
 
-            DEBUG_OUT_FAST("percVellearn_1", getPercVel(r));
+//            DEBUG_OUT_FAST("percVellearn_1", getPercVel(r));
         }
     }
 
     void program(int8_t addr, MessageType t = MessageType::Size, int8_t c = -1, int8_t row = -1)
     {
         // Write
-        setChannel(addr, c);
-        setType(addr, t);
-        setRow(addr, row);
+        channels[addr] = c;
+        types[addr] = t;
+        rows[addr] = row;
 
         // Clear row of perc learns.
         if ( t == MessageType::Keys || t == MessageType::Size )
-            setPercNote(addr, -1);
-        setPercVel(addr, false);
+            percNotes[addr] = -1;
+        percVel[addr] = false;
     }
 
     inline MessageType getType(int8_t a)
@@ -107,14 +107,14 @@ class Programmer {
         return rows[a];
     }
     
-    inline int8_t getPercNote(int8_t r)
+    inline int8_t getPercNote(int8_t a)
     {
-        return percNotes[r];
+        return percNotes[a];
     }
 
-    inline bool getPercVel(int8_t r)
+    inline bool getPercVel(int8_t a)
     {
-        return percVel[r];
+        return percVel[a];
     }
 
     void setRow(int8_t a, int8_t row)
@@ -122,16 +122,18 @@ class Programmer {
         rows[a] = row;
     }
 
-    void setPercNote(int8_t r, int8_t note)
+    void setPerc(int8_t a, int8_t note, bool velState)
     {
-        percNotes[r] = note;
+        program(a); //clear
+        percNotes[a] = note;
+        percVel[a] = velState;
     }
 
-    void setPercVel(int8_t r, bool state)
-    {
-        percVel[r] = state;
-        DEBUG_OUT_FAST("percVellearn", getPercVel(r));
-    }
+//    void setPercVel(int8_t r, bool state)
+//    {
+//        percVel[r] = state;
+////        DEBUG_OUT_FAST("percVellearn", getPercVel(r));
+//    }
 };
 
 template <int8_t addressAmount, int8_t outputsAmount = 4, uint8_t noteAmount = 128>

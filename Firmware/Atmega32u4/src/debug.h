@@ -1,38 +1,34 @@
 #ifdef DEBUG
 
-#define DEBUG_OUT_FAST(text, dec) \
+enum class Debug: uint8_t {
+    Cv,
+    Gate
+};
+
+#define DEBUG_OUT(text) {\
     char debugText[] = text; \
-    char debugNum[20]; \
-    itoa(dec, debugNum, 10); \
-    MIDI.sendSysEx(sizeof(debugText), (uint8_t *)debugText); \
-    MIDI.sendSysEx(sizeof(debugNum), (uint8_t *)debugNum);
+    MIDI.sendSysEx(sizeof(debugText), (uint8_t *)debugText);}
 
-#define DEBUG_OUT(text, arg) \
-    char debug[] = text; \
-    sprintf(debug, debug, arg); \
-    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
+#define DEBUG_OUT_FAST(text, placeFromEnd, dec) {\
+    char debugText[] = text; \
+    itoa(dec, &debugText[sizeof(debugText) - placeFromEnd - 1], 10); \
+    MIDI.sendSysEx(sizeof(debugText), (uint8_t *)debugText);}
 
-#define DEBUG_LOAD_EEPROM \
-    char debug[] = "Load eeprom values size: %d."; \
-    sprintf(debug, debug, a); \
-    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
+#define DEBUG_OUT_SUPERFAST(type, row, val) {\
+    uint8_t debug[] = {(uint8_t)type, row, val >> 7, val & 0x7F}; \
+    MIDI.sendSysEx(sizeof(debug), debug);}
 
-#define DEBUG_SAVE_EEPROM \
-    char debug[] = "Save eeprom values size: %d."; \
-    sprintf(debug, debug, a); \
-    MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
-
-#define DEBUG_ACTIVE_TIMEOUT \
+#define DEBUG_ACTIVE_TIMEOUT //\
     char debug[] = "ActiveSensing timeout.";\
     sprintf(debug, debug);\
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
-#define DEBUG_CV_OUT \
+#define DEBUG_CV_OUT //\
     char debug[] = "cv output: %d, %d.";\
     sprintf(debug, debug, row, value);\
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
 
-#define DEBUG_GATE_OUT \
+#define DEBUG_GATE_OUT //\
     char debug[] = "gate output: %d, %d.";\
     sprintf(debug, debug, row, state);\
     MIDI.sendSysEx(sizeof(debug), (uint8_t *)debug);
